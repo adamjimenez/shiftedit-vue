@@ -1,48 +1,34 @@
-Next milestone
------------
-- firepad user list
-- clear firepad if last user
-- username over caret
-- sync firepad save state
-- push shiftedit-vue to github
-
-Tasks
---
-Prompt on exit
-Git
+! Clear firepad if last user
+! Sync firepad save state
+Git panel / Changes/ History/ Stashes/ Commit/ Discard/ Revert/ Reset/ Copy
 Git Merge errors
-Terminal
 Find in open
-Find options
+Find history
 New site
 Revision history
-Delete file
-Move file
-Rename file
-Notes
 Snippets
 Hash
-Document title
 Footer
 East Panel
 Preferences
-TinyMCE
 Preview
 Diff
 Share site
-ChatGPT
 Master Password
 Database
 Drag drop open file
-Snippets
-Tree
-- move files
+
+? TinyMCE
+Resize drawer # vuetify3-resize-drawer is crap
+Tree # Vuetify Tree component Coming??
+- New file
+- New folder
+- Delete file
+- Rename file
+- Move files
 - Chmod
 - Extract
 - Download zip
 - Drag drop upload
-
-Notes:
-------
-Vuetify Tree component Q2 2023
-vuetify3-resize-drawer doesn't work very well
+- Terminal
+- Snippets

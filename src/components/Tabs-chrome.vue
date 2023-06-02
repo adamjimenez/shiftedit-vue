@@ -24,11 +24,6 @@
                 {{ tab.errors[tab.currentError].row + 1 }}
               </span>
             </div>
-            <!--
-            <v-ace-editor v-model:value="tab.content" lang="html" theme="tomorrow_night" :options="{
-              useWorker: true
-            }" style="height: 300px" @init="editorInit($event, tab)" />
-            -->
 
             <div :ref="'firepad_' + tab.key"></div>
 
@@ -90,6 +85,17 @@
 .ace_selection {
   background: #3297FD !important;
 }
+
+.other_cursor{
+	position: relative;
+	font-size: 10px;
+	padding: 2px 4px;
+	color: #fff;
+	text-shadow: 0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black;
+	-webkit-font-smoothing: antialiased;
+	z-index: 1;
+  width: fit-content;
+}
 </style>
   
 <script>
@@ -139,6 +145,10 @@ export default defineComponent({
         this.$emit('updateUsers', this.currentTab.users);
       },
       deep: true,
+    },
+    currentTab() {
+      var title = this.currentTab.key ? this.currentTab.key : 'ShiftEdit';
+      document.title = title;
     }
   },
   data() {
@@ -267,8 +277,6 @@ export default defineComponent({
 
         var firepad = window.firepads[tab.key]
         firepad.on('ready', function() {
-          console.log('readu');
-
           // set initial edited state
           if( firepad.isHistoryEmpty() ){
             console.log('new firepad session');
@@ -286,16 +294,14 @@ export default defineComponent({
           }
 
           var saveRef = firepadRef.child('save');
-          saveRef.on('value', function(snapshot) {
+          saveRef.on('value', function() {
             if( !firepad ){
               return;
             }
 
-            var revision = firepad.firebaseAdapter_.revision_;            
-
+            var revision = firepad.firebaseAdapter_.revision_;
             console.log('current revision: ' + revision);
-            var data = snapshot.val();
-            console.log(data)
+            self.setSaved(tab.key);
           });
           
         })
@@ -328,6 +334,12 @@ export default defineComponent({
     },
     saveAs: function () {
       this.$emit('saveAs');
+    },
+    setSaved: function (tabKey) {
+      const tab = this.tabs.find(element => element.key === tabKey);
+      tab.title = util.baseName(tab.id);
+      tab.label = tab.title;
+      tab.unsaved = false;
     },
     goToLine: function (line) {
       this.currentTab.editor.gotoLine(line, 0);

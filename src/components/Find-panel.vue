@@ -1,6 +1,22 @@
 <template>
     <v-textarea label="Find" v-model="findVal" ref="find"></v-textarea>
     <p>{{ findIndex }} of {{ findCount }}</p>
+    <v-btn-toggle v-model="regExp">
+        <v-btn icon title="Regex" value="true">        
+            <v-icon>mdi-regex</v-icon>
+        </v-btn>
+    </v-btn-toggle>
+    <v-btn-toggle v-model="caseSensitive">
+        <v-btn icon title="Case sensitive" value="true">        
+            <v-icon>mdi-case-sensitive-alt</v-icon>
+        </v-btn>
+    </v-btn-toggle>
+    <v-btn-toggle v-model="wholeWord">
+        <v-btn icon title="Whole words" value="true">        
+            <v-icon>mdi-file-word-box</v-icon>
+        </v-btn>
+    </v-btn-toggle>
+
     <v-btn @click="prev">&lt;</v-btn>
     <v-btn @click="next">&gt;</v-btn>
     <v-textarea label="Replace" v-model="replaceVal" ref="replace"></v-textarea>
@@ -19,12 +35,24 @@ export default {
             findCount: 0,
             findIndex: 0,
             replaceVal: '',
+            regExp: false,
+            caseSensitive: false,
+            wholeWord: false,
         }
     },
     watch: {
         findVal(val) {
             let editor = this.tabs.currentTab.editor;
             editor.find(val);
+            this.updateIndex();
+        },
+        regExp() {
+            this.updateIndex();
+        },
+        caseSensitive() {
+            this.updateIndex();
+        },
+        wholeWord() {
             this.updateIndex();
         },
     },
@@ -43,13 +71,8 @@ export default {
         },
         updateIndex() {
             let editor = this.tabs.currentTab.editor;
+            var search = this.setSearch();
 
-            var options = {
-                skipCurrent: false,
-                wrao: false,
-                needle: this.findVal,
-            }
-            var search = editor.$search.set(options);
             let results = search.findAll(editor.getSession());
             this.findCount = results.length;
 
@@ -73,29 +96,30 @@ export default {
 
             this.findIndex = found ? findIndex : 0;
         },
-        next() {
+        setSearch() {
             let editor = this.tabs.currentTab.editor;
 
             var options = {
                 skipCurrent: false,
                 wrap: true,
                 needle: this.findVal,
-            }
-            editor.$search.set(options);
-            console.log(editor.$search);
+                caseSensitive: this.caseSensitive,
+                wholeWord: this.wholeWord,
+                regExp: this.regExp,
+            };
+            console.log(options)
+
+            return editor.$search.set(options);
+        },
+        next() {
+            let editor = this.tabs.currentTab.editor;
+            this.setSearch();
             editor.findNext();
             this.updateIndex();
         },
         prev () {
             let editor = this.tabs.currentTab.editor;
-
-            var options = {
-                skipCurrent: false,
-                wrap: false,
-                needle: this.findVal,
-            }
-
-            editor.$search.set(options);
+            this.setSearch();
             editor.findPrevious();
             this.updateIndex();
         },

@@ -9,6 +9,10 @@
                 <v-list-item prepend-icon="mdi-menu" @click.stop="rail = !rail"></v-list-item>
                 <v-list-item prepend-icon="mdi-file" @click.stop="openNav('files')"></v-list-item>
                 <v-list-item prepend-icon="mdi-magnify" @click.stop="openNav('find')"></v-list-item>
+                <!--<v-list-item prepend-icon="mdi-code-tags" @click.stop="openNav('code')"></v-list-item>-->
+                <v-list-item prepend-icon="mdi-lead-pencil" @click.stop="openNav('notes')"></v-list-item>
+                <!--<v-list-item prepend-icon="mdi-content-cut" @click.stop="openNav('snippets')"></v-list-item>-->
+                <!--<v-list-item prepend-icon="mdi-git" @click.stop="openNav('git')"></v-list-item>-->
               </v-list>
             </v-col>
             <v-col v-show="!rail" class="pa-0" style="height: 100%; max-width: calc(100% - 50px);">
@@ -17,7 +21,6 @@
                   <v-autocomplete :label="currentSiteId ? null : 'Site'" item-title="name" item-value="id" :items="sites"
                     v-model="currentSiteId" @update:modelValue="loadSite"></v-autocomplete>
                 </div>
-
                 <tree-panel 
                   ref="treePanel" 
                   v-show="currentSiteId" 
@@ -25,9 +28,10 @@
                   @open="openFile"
                 />
               </div>
-              <div v-show="nav === 'find'">
+              <div v-show="nav === 'find'" style="height: 100%;">
                 <find-panel ref="findPanel" :tabs="$refs.mainTabs" />
               </div>
+              <notes-panel v-show="nav === 'notes'" style="height: 100%; flex-direction: column;" />
             </v-col>
           </v-row>
         </v-container>
@@ -40,14 +44,18 @@
           </v-btn>
         </template>
 
-        <v-avatar
+        <template
           v-for="user in users"
-          color="red"
-          size="36px"
           :key="user.id"
         >
-          <span class="text-h5">{{ user.name }}</span>
+        <v-avatar
+          v-if="user.id != userId"
+          :color="user.color"
+          size="36px"
+        >
+          <span class="text-h5 user">{{ user.name }}</span>
         </v-avatar>
+      </template>
       </v-app-bar>
 
       <v-main>
@@ -88,6 +96,11 @@
 .iconColumn {
   max-width: 50px;
 }
+.user {
+	background: transparent !important;
+	text-shadow: 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black;
+	-webkit-font-smoothing: antialiased
+}
 </style>
 
 <script>
@@ -96,12 +109,14 @@ import util from "./services/util";
 import tabsChrome from './components/Tabs-chrome.vue'
 import findPanel from './components/Find-panel.vue'
 import treePanel from './components/tree-panel.vue'
+import notesPanel from './components/notes-panel.vue'
 
 export default {
   components: {
     tabsChrome,
     findPanel,
     treePanel,
+    notesPanel,
   },
   data() {
     return {
@@ -125,6 +140,7 @@ export default {
       users: [],
       saveAsDialog: false,
       saveAsValue: '',
+      userId: '',
     };
   },
   computed: {
@@ -271,9 +287,7 @@ export default {
           return;
         }
 
-        tab.title = util.baseName(tab.id);
-        tab.label = tab.title;
-        tab.unsaved = false;
+        this.$refs.mainTabs.setSaved(tab.key);
 
         if (close) {
           var fileTabs = this.$refs.mainTabs;
@@ -311,6 +325,8 @@ export default {
   created: async function () {
     await util.fetchPreferences();
     await this.fetchSites();
+
+    this.userId = util.storageGet('user');
   },
 
   shortcuts: {
@@ -328,6 +344,19 @@ export default {
   mounted() {
     this.$shortcut.add('find', 'ctrl+f')
     this.$shortcut.add('saveFile', 'ctrl+s')
+
+    var self = this;
+    window.onbeforeunload = function () {       
+      var unsaved = false;
+      self.$refs.mainTabs.tabs.forEach(function (item) {
+        if (item.unsaved) {
+          unsaved = true;
+        }
+      });
+
+      if (unsaved)
+        return true;
+    };
   },
 };
 </script>
