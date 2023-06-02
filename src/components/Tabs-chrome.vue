@@ -25,6 +25,8 @@
               </span>
             </div>
 
+            <!-- DO NOT REMOVE THIS COMMENT -->
+
             <div :ref="'firepad_' + tab.key"></div>
 
           </v-card-text>
