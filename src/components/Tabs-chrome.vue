@@ -4,7 +4,7 @@
       :onClose="onClose" @contextmenu="handleRightClick">
       <template v-slot:after>
         <button class="btn" style="height: 20px; line-height: 20px; padding: 0 10px; margin-left: 0px;"
-          @click="handleAdd">+</button>
+          @click="handleAdd()">+</button>
       </template>
     </vue3-tabs-chrome>
 
@@ -319,7 +319,7 @@ export default defineComponent({
 
       // FIXME get settings
       var settings = {};
-      if (tab.site && (settings.shared || true)) {
+      if (tab.site && settings.shared) {
         //firepad = true;
 
         if (!this.firebaseConnected) {
@@ -329,6 +329,8 @@ export default defineComponent({
         } else {
           addFirepad(tab);
         }
+      } else {
+        this.setContent(tab, tab.content);
       }
 
     },
@@ -416,7 +418,7 @@ export default defineComponent({
             await util.fetchPreferences();
 
             console.log('reconnect to firebase');
-            this.firebaseConnect();
+            self.firebaseConnect();
           }, 3600 * 1000);
 
           // process callbacks
@@ -431,18 +433,24 @@ export default defineComponent({
     setTabRef: function (el) {
       this.tabRef = el
     },
-    handleAdd: function () {
-      const key = 'tab' + Date.now()
-      this.tabRef.addTab(reactive({
-        label: ref('untitled.html'),
-        title: 'untitled.html',
-        key: key,
-        content: '',
-        editor: null,
-        errors: [],
-        currentError: 0,
-      }))
-      this.tab = key
+    handleAdd: async function (tab) {
+      if (!tab) {
+        tab = {
+          title: 'untitled.html',
+          content: '',
+        };
+      }
+
+      tab.label = tab.title;
+      tab.key = 'tab' + Date.now();
+      tab.editor = null
+      tab.errors = []
+      tab.currentError = 0;
+
+      this.tabRef.addTab(tab);
+      this.tab = tab.key;
+      await this.$nextTick();
+      this.editorInit(tab)
     },
     handleRemove: function () {
     },
@@ -453,6 +461,14 @@ export default defineComponent({
       this.showMenu = true
       this.menuTab = tab;
       e.preventDefault();
+    },
+    setContent(tab, content) {
+      tab.editor.setValue(content);
+      tab.unsaved = false;
+      tab.label = tab.title;
+      tab.editor.moveCursorToPosition({
+        column: 0, row: 0
+      });
     },
     saveFile(close) {
       this.$emit('save', close);
@@ -523,16 +539,8 @@ export default defineComponent({
       });
 
       if (found) {
-
         this.tab = tab.key;
-
-        tab.editor.setValue(tab.content);
-        tab.unsaved = false;
-        tab.label = tab.title;
-        tab.editor.moveCursorToPosition({
-          column: 0, row: 0
-        });
-
+        this.setContent(tab, tab.content);
         return;
       }
 
@@ -557,8 +565,32 @@ export default defineComponent({
     window.firepads = {};
     window.firepadRefs = {};
     window.firepadUserLists = {};
+    
+    var self = this;
+    window.addEventListener("dragover", function (e) {
+      e.preventDefault();
+    }, false);
+    window.addEventListener("drop", function (e) {
+      e.preventDefault();
+      var files = e.dataTransfer.files;
+      var reader = {};
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
 
-    //this.handleAdd();
+        reader[i] = new FileReader();
+        reader[i].onloadend = (function (file, i) {
+          return function () {
+            self.handleAdd({
+              title:  file.name,
+              content: reader[i].result
+            });
+          };
+        }(file, i));
+
+        reader[i].readAsText(file);
+      }
+    }, false);
+
   }
 })
 </script>

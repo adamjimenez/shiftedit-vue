@@ -10,7 +10,6 @@ Preferences Word-wrap / Theme
 Share site
 Delete site
 Master Password
-Drag drop open file
 Color selector
 
 ? East Panel
