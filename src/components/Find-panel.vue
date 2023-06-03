@@ -1,5 +1,5 @@
 <template>
-    <v-textarea label="Find" v-model="findVal" ref="find"></v-textarea>
+    <v-textarea label="Find" v-model="needle" ref="find" @keydown="keyDown" @keypress="keyPress"></v-textarea>
     <p>{{ findIndex }} of {{ findCount }}</p>
     <v-btn-toggle v-model="regExp">
         <v-btn icon title="Regex" value="true">        
@@ -31,17 +31,19 @@ export default {
     },
     data() {
         return {
-            findVal: '',
+            needle: '',
             findCount: 0,
             findIndex: 0,
             replaceVal: '',
             regExp: false,
             caseSensitive: false,
             wholeWord: false,
+            history: [],
+            historyIndex: 0,
         }
     },
     watch: {
-        findVal(val) {
+        needle(val) {
             let editor = this.tabs.currentTab.editor;
             editor.find(val);
             this.updateIndex();
@@ -59,7 +61,7 @@ export default {
     methods: {
         find(val) {
             if (val && val.length) {
-                this.findVal = val;
+                this.needle = val;
             }
 
             var self = this;
@@ -102,16 +104,21 @@ export default {
             var options = {
                 skipCurrent: false,
                 wrap: true,
-                needle: this.findVal,
+                needle: this.needle,
                 caseSensitive: this.caseSensitive,
                 wholeWord: this.wholeWord,
                 regExp: this.regExp,
             };
-            console.log(options)
 
             return editor.$search.set(options);
         },
         next() {
+            // save history
+            if (this.needle !== this.history[this.historyIndex]) {
+                this.history.push(this.needle);
+                this.historyIndex = this.history.length - 1;
+            }
+
             let editor = this.tabs.currentTab.editor;
             this.setSearch();
             editor.findNext();
@@ -127,13 +134,48 @@ export default {
             let editor = this.tabs.currentTab.editor;
             this.next();
             editor.replace(this.replaceVal);
-            editor.find(this.findVal);
+            editor.find(this.needle);
             this.updateIndex();
         },
         replaceAll () {
             let editor = this.tabs.currentTab.editor;
             editor.replaceAll(this.replaceVal);
             this.updateIndex();
+        },
+        keyDown (e) {
+            // cycle through search history
+            if (['ArrowUp', 'ArrowDown'].indexOf(e.key) != -1) {
+                if (e.key === 'ArrowUp' && this.history.length && this.historyIndex > 0) {
+                    this.historyIndex--;
+                } else if (e.key === 'ArrowDown' && this.history.length && this.historyIndex < this.history.length) {
+                    this.historyIndex++;
+                }
+                
+                this.needle = this.history[this.historyIndex];
+                e.preventDefault();
+            }
+        },
+        keyPress (e) {
+            if (e.keyCode === 10) { // ctrl enter
+                this.insertNewLine();
+            } else if (e.keyCode === 13) { // search on enter
+                e.preventDefault();
+                this.next();
+			}
+        },
+        insertNewLine() {
+            let textarea = this.$refs.find.$el.getElementsByTagName('textarea')[0];
+            console.log(textarea)
+
+            // Get the current cursor position
+            let cursorPosition = textarea.selectionStart;
+
+            // Insert a newline character at the cursor position
+            textarea.value = textarea.value.slice(0, cursorPosition) + "\n" + textarea.value.slice(cursorPosition);
+
+            // Move the cursor to the next line
+            textarea.selectionStart = cursorPosition + 1;
+            textarea.selectionEnd = cursorPosition + 1;
         }
     },
 

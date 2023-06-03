@@ -39,13 +39,10 @@
       <v-btn text block @click="saveAs">Save as..</v-btn>
     </v-menu>
 
-    <v-dialog
-      v-model="promptUnsaved"
-      width="auto"
-    >
+    <v-dialog v-model="promptUnsaved" width="auto">
       <v-card>
         <v-card-text>
-          Save changes to {{currentTab.label}}
+          Save changes to {{ currentTab.label }}
         </v-card-text>
         <v-card-actions>
           <v-btn color="primary" @click="promptUnsaved = false; saveFile(true);">Yes</v-btn>
@@ -88,14 +85,14 @@
   background: #3297FD !important;
 }
 
-.other_cursor{
-	position: relative;
-	font-size: 10px;
-	padding: 2px 4px;
-	color: #fff;
-	text-shadow: 0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black;
-	-webkit-font-smoothing: antialiased;
-	z-index: 1;
+.other_cursor {
+  position: relative;
+  font-size: 10px;
+  padding: 2px 4px;
+  color: #fff;
+  text-shadow: 0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black, 0 0 1px black;
+  -webkit-font-smoothing: antialiased;
+  z-index: 1;
   width: fit-content;
 }
 </style>
@@ -150,7 +147,8 @@ export default defineComponent({
     },
     currentTab() {
       var title = this.currentTab.key ? this.currentTab.key : 'ShiftEdit';
-      document.title = title;
+      document.title = title;      
+      this.$emit('changeTab');
     }
   },
   data() {
@@ -199,6 +197,10 @@ export default defineComponent({
       editor.getSession().on("changeAnnotation", function (someVar, session) {
         tab.errors = session.getAnnotations();
         self.updateKey++;
+      });
+
+      editor.getSession().selection.on('changeCursor', function () {
+        self.$emit('changeCursor');
       });
 
       editor.commands.addCommands([{
@@ -259,14 +261,14 @@ export default defineComponent({
         });
 
         // close tab on dispose FIXME
-        firepadRef.on('value', function(snapshot) {
+        firepadRef.on('value', function (snapshot) {
           // you could just check "snapshot.val() == null" here, but it's much cheaper to check for children so do that first.
           if (!snapshot.hasChildren() && snapshot.val() === null) {
             console.log('firebase was removed');
             //tabs.setEdited(tab, false);
             //tabs.close(tab);
           }
-        }, function(){
+        }, function () {
           console.log('firepad permission denied');
           //removeFirepad();
           //editor.getSession().setValue(content);
@@ -278,9 +280,9 @@ export default defineComponent({
         window.firepadUserLists[tab.key] = FirepadUserList.fromDiv(firepadRef.child('users'), util.storageGet('user'), util.storageGet('username'), tab);
 
         var firepad = window.firepads[tab.key]
-        firepad.on('ready', function() {
+        firepad.on('ready', function () {
           // set initial edited state
-          if( firepad.isHistoryEmpty() ){
+          if (firepad.isHistoryEmpty()) {
             console.log('new firepad session');
             //firepad.setText(content);
             //editor.getSession().getUndoManager().reset();
@@ -296,8 +298,8 @@ export default defineComponent({
           }
 
           var saveRef = firepadRef.child('save');
-          saveRef.on('value', function() {
-            if( !firepad ){
+          saveRef.on('value', function () {
+            if (!firepad) {
               return;
             }
 
@@ -305,7 +307,7 @@ export default defineComponent({
             console.log('current revision: ' + revision);
             self.setSaved(tab.key);
           });
-          
+
         })
 
       }

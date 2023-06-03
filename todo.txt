@@ -1,23 +1,21 @@
-! Clear firepad if last user
-! Sync firepad save state
-Git panel / Changes/ History/ Stashes/ Commit/ Discard/ Revert/ Reset/ Copy
-Git Merge errors
+Clear firepad if last user
 Find in open
-Find history
-New site
+Git panel / Changes/ History/ Stashes/ Commit/ Discard/ Revert/ Reset/ Copy/ Diff
+Git Merge errors
+New site / FTP/ SFTP/ Database/ Dropbox/ Google Drive/ WebDav/ Git
 Revision history
-Snippets
 Hash
-Footer
-East Panel
-Preferences
-Preview
-Diff
+Footer / Mode/ goto line/ branch/ new branch/ sync
+Preferences Word-wrap / Theme
 Share site
+Delete site
 Master Password
-Database
 Drag drop open file
+Color selector
 
+? East Panel
+? Diff
+? Preview
 ? TinyMCE
 Resize drawer # vuetify3-resize-drawer is crap
 Tree # Vuetify Tree component Coming??

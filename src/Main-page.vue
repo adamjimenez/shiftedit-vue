@@ -5,28 +5,27 @@
         <v-container class="pb-0" style="height: 100%;">
           <v-row style="flex-wrap: nowrap; height: 100%;">
             <v-col class="pa-0 iconColumn">
-              <v-list density="compact" nav>
-                <v-list-item prepend-icon="mdi-menu" @click.stop="rail = !rail"></v-list-item>
-                <v-list-item prepend-icon="mdi-file" @click.stop="openNav('files')"></v-list-item>
-                <v-list-item prepend-icon="mdi-magnify" @click.stop="openNav('find')"></v-list-item>
-                <!--<v-list-item prepend-icon="mdi-code-tags" @click.stop="openNav('code')"></v-list-item>-->
-                <v-list-item prepend-icon="mdi-lead-pencil" @click.stop="openNav('notes')"></v-list-item>
-                <!--<v-list-item prepend-icon="mdi-content-cut" @click.stop="openNav('snippets')"></v-list-item>-->
-                <!--<v-list-item prepend-icon="mdi-git" @click.stop="openNav('git')"></v-list-item>-->
+              <v-list density="compact" nav ref="navMenu">
+                <v-list-item prepend-icon="mdi-menu" @click="rail = !rail"></v-list-item>
+                <v-list-item prepend-icon="mdi-file" @click.stop="openNav('files', $event)" value="files"
+                  :active="nav === 'files'"></v-list-item>
+                <v-list-item prepend-icon="mdi-magnify" @click="openNav('find', $event)" value="find"
+                  :active="nav === 'find'"></v-list-item>
+                <!--<v-list-item prepend-icon="mdi-code-tags" @click="openNav('code', $event)" value="code" :active="nav === 'code'"></v-list-item>-->
+                <v-list-item prepend-icon="mdi-lead-pencil" @click.stop="openNav('notes', $event)" value="notes"
+                  :active="nav === 'notes'"></v-list-item>
+                <!--<v-list-item prepend-icon="mdi-content-cut" @click="openNav('snippets', $event)" value="snippets" :active="nav === 'snippets'"></v-list-item>-->
+                <!--<v-list-item prepend-icon="mdi-git" @click="openNav('git', $event)" value="git" :active="nav === 'git'"></v-list-item>-->
               </v-list>
             </v-col>
             <v-col v-show="!rail" class="pa-0" style="height: 100%; max-width: calc(100% - 50px);">
               <div v-show="nav === 'files'" style="height: 100%; display: flex; flex-direction: column;">
                 <div style="flex: 0;">
                   <v-autocomplete :label="currentSiteId ? null : 'Site'" item-title="name" item-value="id" :items="sites"
-                    v-model="currentSiteId" @update:modelValue="loadSite"></v-autocomplete>
+                    v-model="currentSiteId" @update:modelValue="loadSite" @mousedown="preventRightClick($event)"
+                    @contextmenu="showSiteMenu($event)"></v-autocomplete>
                 </div>
-                <tree-panel 
-                  ref="treePanel" 
-                  v-show="currentSiteId" 
-                  :current-site="currentSite"
-                  @open="openFile"
-                />
+                <tree-panel ref="treePanel" v-show="currentSiteId" :current-site="currentSite" @open="openFile" />
               </div>
               <div v-show="nav === 'find'" style="height: 100%;">
                 <find-panel ref="findPanel" :tabs="$refs.mainTabs" />
@@ -44,38 +43,50 @@
           </v-btn>
         </template>
 
-        <template
-          v-for="user in users"
-          :key="user.id"
-        >
-        <v-avatar
-          v-if="user.id != userId"
-          :color="user.color"
-          size="36px"
-        >
-          <span class="text-h5 user">{{ user.name }}</span>
-        </v-avatar>
-      </template>
+        <template v-for="user in users" :key="user.id">
+          <v-avatar v-if="user.id != userId" :color="user.color" size="36px">
+            <span class="text-h5 user">{{ user.name }}</span>
+          </v-avatar>
+        </template>
       </v-app-bar>
 
       <v-main>
         <v-container fluid class="pa-0" loading="true">
-          <tabs-chrome ref="mainTabs" 
-            @find="find"
-            @open="openFile"
-            @updateUsers="updateUsers"
+          <tabs-chrome 
+            ref="mainTabs" 
+            @find="find" 
+            @open="openFile" 
+            @updateUsers="updateUsers" 
             @save="saveFile"
-            @saveAs="saveAs"
-          />
+            @saveAs="saveAs" 
+            @changeCursor="changeCursor"
+            @changeTab="changeTab" 
+            />
         </v-container>
 
         <v-progress-linear v-if="loading" indeterminate></v-progress-linear>
       </v-main>
 
-      <v-dialog
-        v-model="saveAsDialog"
-        width="500"
-      >
+      <v-footer app>
+        <v-autocomplete density="compact"></v-autocomplete>
+        <v-btn icon>
+          <v-icon>mdi-sync</v-icon>
+        </v-btn>
+
+        <v-btn>
+          {{ selection.lead.row+1 }}:{{ selection.lead.column+1 }}
+          <span v-if="!selection.empty">({{ selection.anchor.row+1 }}:{{ selection.anchor.column+1 }})</span>
+        </v-btn>
+        <v-select density="compact"></v-select>
+
+      </v-footer>
+
+      <v-menu v-model="siteMenu" :style="'left: ' + siteMenuX + 'px; top: ' + siteMenuY + 'px;'">
+        <v-btn text block @click="database"
+          :disabled="!currentSiteId || currentSite.db_phpmyadmin === ''">Database</v-btn>
+      </v-menu>
+
+      <v-dialog v-model="saveAsDialog" width="500">
         <v-card>
           <v-card-text>
             <v-text-field v-model="saveAsValue" label="Save as" ref="saveAsValue"></v-text-field>
@@ -87,7 +98,10 @@
         </v-card>
       </v-dialog>
 
-      <v-footer app></v-footer>
+      <form id="pma_form" method="post" target="_blank" :action="currentSite.db_phpmyadmin">
+        <input type="hidden" name="pma_username" :value="currentSite.db_username">
+        <input type="hidden" name="pma_password" :value="currentSite.db_password">
+      </form>
     </v-app>
   </div>
 </template>
@@ -96,10 +110,11 @@
 .iconColumn {
   max-width: 50px;
 }
+
 .user {
-	background: transparent !important;
-	text-shadow: 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black;
-	-webkit-font-smoothing: antialiased
+  background: transparent !important;
+  text-shadow: 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black, 0 0 4px black;
+  -webkit-font-smoothing: antialiased
 }
 </style>
 
@@ -122,6 +137,7 @@ export default {
     return {
       props: null,
       drawer: true,
+      nav: 'files',
       rail: true,
       selectedTab: null,
       currentSiteId: null,
@@ -133,7 +149,6 @@ export default {
           text: 'yo'
         },
       ],
-      nav: 'files',
       sites: [],
       open: ['Files'],
       loading: false,
@@ -141,6 +156,22 @@ export default {
       saveAsDialog: false,
       saveAsValue: '',
       userId: '',
+      siteMenu: false,
+      siteMenuX: 0,
+      siteMenuY: 0,
+      row: 0,
+      col: 0,
+      selection: {
+        lead: {
+          row: 0,
+          column: 0
+        },
+        anchor: {
+          row: 0,
+          column: 0
+        },
+        empty: true
+      }
     };
   },
   computed: {
@@ -159,8 +190,9 @@ export default {
     },
     currentTab() {
       return this.$refs.mainTabs.currentTab
-    }
+    },
   },
+  
   methods: {
     addTab() {
       this.tabCount++;
@@ -226,7 +258,7 @@ export default {
       // check if file is already open
       var fileTabs = self.$refs.mainTabs;
 
-      if (!options.reload) {        
+      if (!options.reload) {
         var found = false;
         fileTabs.tabs.forEach(function (item) {
           if (item.id === file && item.site === self.currentSite.id) {
@@ -268,7 +300,7 @@ export default {
         .finally(() => self.loading = false);
     },
 
-    saveFile: async function(close) {
+    saveFile: async function (close) {
       let tab = this.currentTab;
       let editor = tab.editor;
 
@@ -320,6 +352,52 @@ export default {
 
     updateUsers(users) {
       this.users = users;
+    },
+
+    preventRightClick(event) {
+      if (event.button === 2) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false // stop propagation
+      }
+    },
+
+    showSiteMenu(event) {
+      event.preventDefault();
+      this.siteMenu = true;
+      this.siteMenuX = event.clientX;
+      this.siteMenuY = event.clientY;
+      return false // stop propagation
+    },
+
+    database() {
+      document.getElementById('pma_form').submit();
+    },
+
+    changeCursor() {
+      var tab = this.currentTab;
+
+      if (!tab) {
+        return;
+      }
+
+      var editor = tab.editor;
+
+      if (!editor) {
+        return;
+      }
+
+      var selection = editor.session.getSelection();
+
+      this.selection.lead.row = selection.lead.row;
+      this.selection.lead.column = selection.lead.column;
+      this.selection.anchor.row = selection.anchor.row;
+      this.selection.anchor.column = selection.anchor.column;
+      this.selection.empty = selection.isEmpty();
+    },
+
+    changeTab() {
+      this.changeCursor();
     }
   },
   created: async function () {
@@ -346,7 +424,7 @@ export default {
     this.$shortcut.add('saveFile', 'ctrl+s')
 
     var self = this;
-    window.onbeforeunload = function () {       
+    window.onbeforeunload = function () {
       var unsaved = false;
       self.$refs.mainTabs.tabs.forEach(function (item) {
         if (item.unsaved) {
@@ -360,5 +438,3 @@ export default {
   },
 };
 </script>
-  
- 
