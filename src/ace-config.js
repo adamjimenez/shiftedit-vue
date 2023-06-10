@@ -69,3 +69,6 @@ ace.config.setModuleUrl('ace/snippets/json', snippetsJsonUrl);
 
 import 'ace-builds/src-noconflict/ext-language_tools';
 ace.require("ace/ext/language_tools");
+
+import 'ace-builds/src-noconflict/ext-prompt';
+ace.require("ace/ext/prompt");

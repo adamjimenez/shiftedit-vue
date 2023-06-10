@@ -6,6 +6,9 @@ export default {
 		var pos = file.lastIndexOf('/');
 		return file.substring(pos + 1, file.length);
 	},
+	copy(text) {
+		navigator.clipboard.writeText(text);
+	},
 	sha1: function (str) {
 		// http://kevin.vanzonneveld.net
 		// + original by: Webtoolkit.info (http://www.webtoolkit.info/)

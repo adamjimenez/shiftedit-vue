@@ -2,7 +2,7 @@
   <div class="page-container">
     <v-app>
       <v-navigation-drawer :rail="rail" permanent ref="drawer" width="400">
-        <v-container class="pb-0" style="height: 100%;">
+        <v-container class="pb-0 h-100">
           <v-row style="flex-wrap: nowrap; height: 100%;">
             <v-col class="pa-0 iconColumn">
               <v-list density="compact" nav ref="navMenu">
@@ -15,7 +15,7 @@
                 <v-list-item prepend-icon="mdi-lead-pencil" @click.stop="openNav('notes', $event)" value="notes"
                   :active="nav === 'notes'"></v-list-item>
                 <!--<v-list-item prepend-icon="mdi-content-cut" @click="openNav('snippets', $event)" value="snippets" :active="nav === 'snippets'"></v-list-item>-->
-                <!--<v-list-item prepend-icon="mdi-git" @click="openNav('git', $event)" value="git" :active="nav === 'git'"></v-list-item>-->
+                <v-list-item prepend-icon="mdi-git" @click="openNav('git', $event)" value="git" :active="nav === 'git'"></v-list-item>
               </v-list>
             </v-col>
             <v-col v-show="!rail" class="pa-0" style="height: 100%; max-width: calc(100% - 50px);">
@@ -31,6 +31,7 @@
                 <find-panel ref="findPanel" :tabs="$refs.mainTabs" />
               </div>
               <notes-panel v-show="nav === 'notes'" style="height: 100%; flex-direction: column;" />
+              <git-panel ref="git" :tabs="$refs.mainTabs" v-show="nav === 'git'" :current-site="currentSite" class="align-start flex-column" @open="openFile" @load="updateGit" />
             </v-col>
           </v-row>
         </v-container>
@@ -68,12 +69,12 @@
       </v-main>
 
       <v-footer app>
-        <v-autocomplete density="compact"></v-autocomplete>
+        <v-autocomplete v-model="branch" :items="branches" item-title="name" item-value="name" density="compact"></v-autocomplete>
         <v-btn icon>
           <v-icon>mdi-sync</v-icon>
         </v-btn>
 
-        <v-btn>
+        <v-btn @click="goToLine">
           {{ selection.lead.row+1 }}:{{ selection.lead.column+1 }}
           <span v-if="!selection.empty">({{ selection.anchor.row+1 }}:{{ selection.anchor.column+1 }})</span>
         </v-btn>
@@ -125,6 +126,7 @@ import tabsChrome from './components/Tabs-chrome.vue'
 import findPanel from './components/Find-panel.vue'
 import treePanel from './components/tree-panel.vue'
 import notesPanel from './components/notes-panel.vue'
+import gitPanel from './components/git-panel.vue'
 
 export default {
   components: {
@@ -132,6 +134,7 @@ export default {
     findPanel,
     treePanel,
     notesPanel,
+    gitPanel,
   },
   data() {
     return {
@@ -170,8 +173,10 @@ export default {
           row: 0,
           column: 0
         },
-        empty: true
-      }
+        empty: true,
+      },
+      branch: 'master',
+      branches: [],
     };
   },
   computed: {
@@ -242,7 +247,9 @@ export default {
       }
       await this.$nextTick();
 
-      this.$refs.treePanel.load();
+      await this.$refs.treePanel.load();
+
+      await this.$refs.git.load();
     },
     openFile(file, siteId, options) {
       let self = this;
@@ -398,6 +405,21 @@ export default {
 
     changeTab() {
       this.changeCursor();
+    },
+
+    updateGit(data) {
+      console.log(data)
+      this.branches = data.branches;
+      this.branch = this.$refs.git.currentBranch;
+    },
+
+    goToLine() {
+      let tab = this.currentTab;
+      let editor = tab.editor;
+      
+      if (editor) {
+        editor.commands.exec('gotoline', editor);
+      }
     }
   },
   created: async function () {

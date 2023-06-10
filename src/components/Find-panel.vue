@@ -2,7 +2,7 @@
     <v-textarea label="Find" v-model="needle" ref="find" @keydown="keyDown" @keypress="keyPress"></v-textarea>
     <p>{{ findIndex }} of {{ findCount }}</p>
     <v-btn-toggle v-model="regExp">
-        <v-btn icon title="Regex" value="true">        
+        <v-btn icon title="Regex" value="true">   
             <v-icon>mdi-regex</v-icon>
         </v-btn>
     </v-btn-toggle>

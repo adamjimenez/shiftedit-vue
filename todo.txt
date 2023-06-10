@@ -1,16 +1,21 @@
 Clear firepad if last user
 Find in open
-Git panel / Changes/ History/ Stashes/ Commit/ Discard/ Revert/ Reset/ Copy/ Diff
 Git Merge errors
 New site / FTP/ SFTP/ Database/ Dropbox/ Google Drive/ WebDav/ Git
 Revision history
-Hash
-Footer / Mode/ goto line/ branch/ new branch/ sync
+Location Hash
+Footer
+- Change Mode
+- Change branch
+- New branch
+- Sync
+- Merge branch
+- Delete branch
 Preferences Word-wrap / Theme
 Share site
 Delete site
 Master Password
-Color selector
+Color picker
 
 ? East Panel
 ? Diff
