@@ -3838,6 +3838,14 @@
   dependencies:
     "flat-cache" "^3.0.4"
 
+"file-loader@^6.2.0":
+  "integrity" "sha512-qo3glqyTa61Ytg4u73GultjHGjdRyig3tG6lPtyX/jOEJvHif9uB0/OCI2Kif6ctF3caQTW2G5gym21oAsI4pw=="
+  "resolved" "https://registry.npmjs.org/file-loader/-/file-loader-6.2.0.tgz"
+  "version" "6.2.0"
+  dependencies:
+    "loader-utils" "^2.0.0"
+    "schema-utils" "^3.0.0"
+
 "fill-range@^7.0.1":
   "integrity" "sha512-qOo9F+dMUmC2Lcb4BbVvnKJxTPjCm+RRpe4gDuGrzkL7mEVl/djYSu2OdQ2Pa302N4oqkSg9ir6jaLWJ2USVpQ=="
   "resolved" "https://registry.npmjs.org/fill-range/-/fill-range-7.0.1.tgz"
@@ -4712,6 +4720,16 @@
   "integrity" "sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg=="
   "resolved" "https://registry.npmjs.org/lines-and-columns/-/lines-and-columns-1.2.4.tgz"
   "version" "1.2.4"
+
+"linkify-html@^4.1.1":
+  "integrity" "sha512-7RcF7gIhEOGBBvs7orCJ2tevaz7iF0ZLZSRPWNNBOnW/uGjOOQYB+ztSeHF6dchMC2dM9H8zZlt6Z959bjteaw=="
+  "resolved" "https://registry.npmjs.org/linkify-html/-/linkify-html-4.1.1.tgz"
+  "version" "4.1.1"
+
+"linkifyjs@^4.0.0", "linkifyjs@^4.1.1":
+  "integrity" "sha512-zFN/CTVmbcVef+WaDXT63dNzzkfRBKT1j464NJQkV7iSgJU0sLBus9W0HBwnXK13/hf168pbrx/V/bjEHOXNHA=="
+  "resolved" "https://registry.npmjs.org/linkifyjs/-/linkifyjs-4.1.1.tgz"
+  "version" "4.1.1"
 
 "loader-runner@^4.1.0", "loader-runner@^4.2.0":
   "integrity" "sha512-3R/1M+yS3j5ou80Me59j7F9IMs4PXs3VqRrm0TU3AbKPxlmpoY1TNscJV/oGJXo8qCatFGTfDbY6W6ipGOYXfg=="

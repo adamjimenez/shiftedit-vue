@@ -123,6 +123,7 @@ import util from "./../services/util";
 import confirm from "./confirm-dialog.vue";
 import * as Diff2Html from 'diff2html';
 import 'diff2html/bundles/css/diff2html.min.css';
+import linkifyHtml from "linkify-html";
 
 export default {
     components: {
@@ -161,8 +162,6 @@ export default {
             diffTitle: '',
             diffContent: '',
         }
-    },
-    watch: {
     },
     methods: {
         load: async function () {
@@ -380,6 +379,22 @@ export default {
                 this.load();
             }
         },
+        sync: async function () {
+            var params = {};
+            let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=sync', params);
+
+            if (response.data.error) {
+                alert(response.data.error);
+                return;
+            }
+
+            this.title = 'Success';
+            var html = response.data.result.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br>$2');
+            html = linkifyHtml(html, {target: '_blank'});
+
+            this.message = html;
+            this.prompt = true;
+        }
     },
 
     computed: {

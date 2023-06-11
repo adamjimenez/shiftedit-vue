@@ -1,4 +1,12 @@
 <template>
+    <v-btn-toggle v-model="regExp">
+        <v-btn icon title="Find in Current Document" value="current">   
+            <v-icon>mdi-file</v-icon>
+        </v-btn>
+        <v-btn icon title="Find in Open Documents" value="open">   
+            <v-icon>mdi-file-multiple</v-icon>
+        </v-btn>
+    </v-btn-toggle>
     <v-textarea label="Find" v-model="needle" ref="find" @keydown="keyDown" @keypress="keyPress"></v-textarea>
     <p>{{ findIndex }} of {{ findCount }}</p>
     <v-btn-toggle v-model="regExp">
@@ -40,6 +48,7 @@ export default {
             wholeWord: false,
             history: [],
             historyIndex: 0,
+            findIn: 'current',
         }
     },
     watch: {

@@ -1,4 +1,14 @@
 import ace from 'ace-builds';
+//import "ace-builds/webpack-resolver"
+
+// cdnjs didn't have a "no-conflict" version, so we'll use jsdelivr
+const CDN = 'https://cdn.jsdelivr.net/npm/ace-builds@1.22.1/src-min-noconflict';
+
+// Now we tell ace to use the CDN locations to look for files
+ace.config.set('basePath', CDN);
+ace.config.set('modePath', CDN);
+ace.config.set('themePath', CDN);
+ace.config.set('workerPath', CDN);
 
 /*
 ace.config.set(
@@ -72,3 +82,6 @@ ace.require("ace/ext/language_tools");
 
 import 'ace-builds/src-noconflict/ext-prompt';
 ace.require("ace/ext/prompt");
+
+import 'ace-builds/src-noconflict/ext-modelist';
+ace.require("ace/ext/modelist");

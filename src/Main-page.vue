@@ -15,7 +15,10 @@
                 <v-list-item prepend-icon="mdi-lead-pencil" @click.stop="openNav('notes', $event)" value="notes"
                   :active="nav === 'notes'"></v-list-item>
                 <!--<v-list-item prepend-icon="mdi-content-cut" @click="openNav('snippets', $event)" value="snippets" :active="nav === 'snippets'"></v-list-item>-->
-                <v-list-item prepend-icon="mdi-git" @click="openNav('git', $event)" value="git" :active="nav === 'git'"></v-list-item>
+                <v-list-item prepend-icon="mdi-git" @click="openNav('git', $event)" value="git"
+                  :active="nav === 'git'"></v-list-item>
+                <v-list-item prepend-icon="mdi-wrench" @click="openNav('prefs', $event)" value="prefs"
+                  :active="nav === 'prefs'"></v-list-item>
               </v-list>
             </v-col>
             <v-col v-show="!rail" class="pa-0" style="height: 100%; max-width: calc(100% - 50px);">
@@ -23,7 +26,12 @@
                 <div style="flex: 0;">
                   <v-autocomplete :label="currentSiteId ? null : 'Site'" item-title="name" item-value="id" :items="sites"
                     v-model="currentSiteId" @update:modelValue="loadSite" @mousedown="preventRightClick($event)"
-                    @contextmenu="showSiteMenu($event)"></v-autocomplete>
+                    @contextmenu="showSiteMenu($event)">
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props" :title="item.raw.name" :value="item.raw.id"
+                        @contextmenu="showSiteMenu($event, item)"></v-list-item>
+                    </template>
+                  </v-autocomplete>
                 </div>
                 <tree-panel ref="treePanel" v-show="currentSiteId" :current-site="currentSite" @open="openFile" />
               </div>
@@ -31,7 +39,11 @@
                 <find-panel ref="findPanel" :tabs="$refs.mainTabs" />
               </div>
               <notes-panel v-show="nav === 'notes'" style="height: 100%; flex-direction: column;" />
-              <git-panel ref="git" :tabs="$refs.mainTabs" v-show="nav === 'git'" :current-site="currentSite" class="align-start flex-column" @open="openFile" @load="updateGit" />
+              <git-panel ref="git" :tabs="$refs.mainTabs" v-show="nav === 'git'" :current-site="currentSite"
+                class="align-start flex-column" @open="openFile" @load="updateGit" />
+              <div v-show="nav === 'prefs'" style="height: 100%;">
+                <prefs-panel ref="prefsPanel" :tabs="$refs.mainTabs" />
+              </div>
             </v-col>
           </v-row>
         </v-container>
@@ -53,36 +65,33 @@
 
       <v-main>
         <v-container fluid class="pa-0" loading="true">
-          <tabs-chrome 
-            ref="mainTabs" 
-            @find="find" 
-            @open="openFile" 
-            @updateUsers="updateUsers" 
-            @save="saveFile"
-            @saveAs="saveAs" 
-            @changeCursor="changeCursor"
-            @changeTab="changeTab" 
-            />
+          <tabs-chrome ref="mainTabs" @find="find" @open="openFile" @updateUsers="updateUsers" @save="saveFile"
+            @saveAs="saveAs" @changeCursor="changeCursor" @changeTab="changeTab" @modes="updateModes" />
         </v-container>
 
         <v-progress-linear v-if="loading" indeterminate></v-progress-linear>
       </v-main>
 
       <v-footer app>
-        <v-autocomplete v-model="branch" :items="branches" item-title="name" item-value="name" density="compact"></v-autocomplete>
-        <v-btn icon>
+        <v-autocomplete v-model="branch" :items="branches" item-title="name" item-value="name"
+          density="compact"></v-autocomplete>
+        <v-btn icon @click="gitSync">
           <v-icon>mdi-sync</v-icon>
         </v-btn>
 
         <v-btn @click="goToLine">
-          {{ selection.lead.row+1 }}:{{ selection.lead.column+1 }}
-          <span v-if="!selection.empty">({{ selection.anchor.row+1 }}:{{ selection.anchor.column+1 }})</span>
+          {{ selection.lead.row + 1 }}:{{ selection.lead.column + 1 }}
+          <span v-if="!selection.empty">({{ selection.anchor.row + 1 }}:{{ selection.anchor.column + 1 }})</span>
         </v-btn>
-        <v-select density="compact"></v-select>
+        <v-select v-model="mode" density="compact" :items="modes" item-title="caption"  item-value="mode" @update:modelValue="changeMode"></v-select>
 
       </v-footer>
 
-      <v-menu v-model="siteMenu" :style="'left: ' + siteMenuX + 'px; top: ' + siteMenuY + 'px;'">
+      <v-menu v-model="siteMenu" :style="'left: ' + menuX + 'px; top: ' + menuY + 'px;'">
+        <v-btn text block>New</v-btn>
+        <v-btn text block>Edit</v-btn>
+        <v-btn text block @click="deleteSite">Delete</v-btn>
+        <v-btn text block>Share</v-btn>
         <v-btn text block @click="database"
           :disabled="!currentSiteId || currentSite.db_phpmyadmin === ''">Database</v-btn>
       </v-menu>
@@ -103,6 +112,8 @@
         <input type="hidden" name="pma_username" :value="currentSite.db_username">
         <input type="hidden" name="pma_password" :value="currentSite.db_password">
       </form>
+
+      <confirm ref="confirm" />
     </v-app>
   </div>
 </template>
@@ -127,6 +138,8 @@ import findPanel from './components/Find-panel.vue'
 import treePanel from './components/tree-panel.vue'
 import notesPanel from './components/notes-panel.vue'
 import gitPanel from './components/git-panel.vue'
+import prefsPanel from './components/prefs-panel.vue'
+import confirm from "./components/confirm-dialog.vue";
 
 export default {
   components: {
@@ -135,6 +148,8 @@ export default {
     treePanel,
     notesPanel,
     gitPanel,
+    prefsPanel,
+    confirm,
   },
   data() {
     return {
@@ -160,8 +175,8 @@ export default {
       saveAsValue: '',
       userId: '',
       siteMenu: false,
-      siteMenuX: 0,
-      siteMenuY: 0,
+      menuX: 0,
+      menuY: 0,
       row: 0,
       col: 0,
       selection: {
@@ -177,6 +192,9 @@ export default {
       },
       branch: 'master',
       branches: [],
+      selectedSite: {},
+      mode: '',
+      modes: [],
     };
   },
   computed: {
@@ -189,7 +207,7 @@ export default {
         }
       })
 
-      site.apiBaseUrl = site.turbo > 0 ? site.web_url + '/shiftedit-proxy.php?ModPagespeed=off' : '';
+      site.apiBaseUrl = site.turbo > 0 ? site.web_url + '/shiftedit-proxy.php?ModPagespeed=off' : '/api/';
 
       return site;
     },
@@ -197,7 +215,7 @@ export default {
       return this.$refs.mainTabs.currentTab
     },
   },
-  
+
   methods: {
     addTab() {
       this.tabCount++;
@@ -311,6 +329,10 @@ export default {
       let tab = this.currentTab;
       let editor = tab.editor;
 
+      if (!editor) {
+        return false;
+      }
+
       let params = {
         file: tab.id,
         content: editor.getValue()
@@ -369,12 +391,32 @@ export default {
       }
     },
 
-    showSiteMenu(event) {
+    showSiteMenu(event, site) {
+      this.selectedSite = site ? site : this.currentSite;
       event.preventDefault();
       this.siteMenu = true;
-      this.siteMenuX = event.clientX;
-      this.siteMenuY = event.clientY;
+      this.menuX = event.clientX;
+      this.menuY = event.clientY;
       return false // stop propagation
+    },
+
+    deleteSite: async function () {
+      if (
+        await this.$refs.confirm.open(
+          "Delete site " + this.selectedSite.raw.name,
+          "Are you sure?"
+        )
+      ) {
+        var params = {};
+        let response = await api.post('sites?cmd=delete&site=' + this.selectedSite.raw.id, params);
+
+        if (response.data.error) {
+          alert(response.data.error);
+          return;
+        }
+
+        this.fetchSites();
+      }
     },
 
     database() {
@@ -405,6 +447,13 @@ export default {
 
     changeTab() {
       this.changeCursor();
+
+      let tab = this.currentTab;
+      let editor = tab.editor;
+
+      if (editor) {      
+        this.mode = editor.session.$modeId;
+      }
     },
 
     updateGit(data) {
@@ -416,10 +465,32 @@ export default {
     goToLine() {
       let tab = this.currentTab;
       let editor = tab.editor;
-      
+
       if (editor) {
         editor.commands.exec('gotoline', editor);
       }
+    },
+
+    updateModes(modes) {
+      this.modes = modes;
+    },
+
+    changeMode() {
+      let tab = this.currentTab;
+      let editor = tab.editor;
+
+      if (editor) {
+        editor.getSession().setMode(this.mode);
+      }
+    },
+
+    gitSync: async function () {
+      this.loading = true;      
+      await this.$refs.git.sync();
+      this.loading = false;
+
+      await this.$refs.treePanel.load();
+      this.$refs.mainTabs.reloadActive();
     }
   },
   created: async function () {

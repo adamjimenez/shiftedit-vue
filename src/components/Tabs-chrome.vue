@@ -13,7 +13,7 @@
         <v-card flat>
           <v-card-text class="pa-0">
 
-            <div class="pa-1 bg-error text-caption" @click="goToLine(tab.errors[0].row)" :key="updateKey"
+            <div class="pa-1 bg-error text-caption" @click="goToLine(tab.errors[tab.currentError].row + 1)" :key="updateKey"
               v-show="tab.errors.length > 0">
               <v-btn size="small" variant="plain" @click="tab.currentError--"
                 :disabled="tab.currentError === 0">&lt;</v-btn>
@@ -147,7 +147,7 @@ export default defineComponent({
     },
     currentTab() {
       var title = this.currentTab.key ? this.currentTab.key : 'ShiftEdit';
-      document.title = title;      
+      document.title = title;
       this.$emit('changeTab');
     }
   },
@@ -195,7 +195,29 @@ export default defineComponent({
       editor.getSession().setMode("ace/mode/" + mode);
 
       editor.getSession().on("changeAnnotation", function (someVar, session) {
-        tab.errors = session.getAnnotations();
+        // add merge conflicts
+
+        var errors = session.getAnnotations();
+
+        // find merge conflicts
+        //var Search = require("ace/search").Search;
+        var search = editor.$search.set({
+          needle: '<<<<<<<'
+        });
+
+        var results = search.findAll(session);
+        results.reverse();
+
+        results.forEach(function (item) {
+          errors.unshift({
+            row: item.start.row,
+            column: 0,
+            text: 'Merge conflict',
+            type: 'Error'
+          });
+        });
+
+        tab.errors = errors
         self.updateKey++;
       });
 
@@ -308,6 +330,7 @@ export default defineComponent({
             self.setSaved(tab.key);
           });
 
+          self.$emit('changeTab');
         })
 
       }
@@ -316,6 +339,8 @@ export default defineComponent({
 
       //FIREPAD
       //var firepad = false;
+
+      this.applyPrefs(tab);
 
       // FIXME get settings
       var settings = {};
@@ -331,6 +356,7 @@ export default defineComponent({
         }
       } else {
         this.setContent(tab, tab.content);
+        this.$emit('changeTab');
       }
 
     },
@@ -520,6 +546,22 @@ export default defineComponent({
       }
 
       return true;
+    },
+
+    reloadActive: async function () {
+      this.tabs.forEach(function (item) {
+        if (item.unsaved) {
+          this.$emit('open', item.id, item.site, { reload: true });
+        }
+      });
+    },
+
+    applyPrefs: function(tab) {
+      let editor = tab.editor;
+      if (editor) {        
+          let wordWrap = util.storageGet('wordWrap');
+          editor.getSession().setUseWrapMode(Boolean(wordWrap));
+      }
     }
 
   },
@@ -565,7 +607,13 @@ export default defineComponent({
     window.firepads = {};
     window.firepadRefs = {};
     window.firepadUserLists = {};
-    
+
+    var modelist = ace.require("ace/ext/modelist")
+
+    // modes list
+    this.$emit('modes', modelist.modes);
+
+    // drag drop open
     var self = this;
     window.addEventListener("dragover", function (e) {
       e.preventDefault();
@@ -581,7 +629,7 @@ export default defineComponent({
         reader[i].onloadend = (function (file, i) {
           return function () {
             self.handleAdd({
-              title:  file.name,
+              title: file.name,
               content: reader[i].result
             });
           };
