@@ -561,6 +561,12 @@ export default defineComponent({
       if (editor) {        
           let wordWrap = util.storageGet('wordWrap');
           editor.getSession().setUseWrapMode(Boolean(wordWrap));
+          
+          let codeTheme = util.storageGet('codeTheme');
+
+          if (codeTheme) {
+            editor.setTheme("ace/theme/" + codeTheme);
+          }
       }
     }
 

@@ -10,7 +10,6 @@ New site
 - Git
 Revision history
 Location Hash
-Code Theme
 Share site
 Master Password
 Color picker
