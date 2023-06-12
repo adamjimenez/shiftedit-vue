@@ -252,6 +252,29 @@ export default {
 		return mode;
 	},
 
+    getOffset: function (element) {
+        var top = 0;
+        var left = 0;
+        while (element) {
+            top += element.offsetTop;
+            left += element.offsetLeft;
+            element = element.offsetParent;
+        }
+        return {
+            top: top,
+            left: left
+        };
+    },
+
+	hexToRgb: function(hex) {
+		var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		return result ? {
+			r: parseInt(result[1], 16),
+			g: parseInt(result[2], 16),
+			b: parseInt(result[3], 16)
+		} : null;
+	},
+
 	storageSet: function (key, val) {
 		return localStorage[key] = JSON.stringify(val);
 	},

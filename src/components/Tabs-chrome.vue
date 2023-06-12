@@ -13,8 +13,8 @@
         <v-card flat>
           <v-card-text class="pa-0">
 
-            <div class="pa-1 bg-error text-caption" @click="goToLine(tab.errors[tab.currentError].row + 1)" :key="updateKey"
-              v-show="tab.errors.length > 0">
+            <div class="pa-1 bg-error text-caption" @click="goToLine(tab.errors[tab.currentError].row + 1)"
+              :key="updateKey" v-show="tab.errors.length > 0">
               <v-btn size="small" variant="plain" @click="tab.currentError--"
                 :disabled="tab.currentError === 0">&lt;</v-btn>
               <v-btn size="small" variant="plain" @click="tab.currentError++"
@@ -27,7 +27,13 @@
 
             <!-- DO NOT REMOVE THIS COMMENT -->
 
-            <div :ref="'firepad_' + tab.key"></div>
+            <div style="
+                    display: flex;
+                    flex: 1;
+                    position: relative;
+                ">
+              <div :ref="'firepad_' + tab.key"></div>
+            </div>
 
           </v-card-text>
         </v-card>
@@ -69,9 +75,9 @@
 .v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item,
 .v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card,
 .v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text,
-.v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text>div.ace_editor,
-.v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text>div.firepad,
-.v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text>div.firepad>div.ace_editor {
+.v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text>div>div.ace_editor,
+.v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text>div>div.firepad,
+.v-main .v-container>div>div.v-window>div.v-window__container>div.v-window-item>div.v-card>div.v-card-text>div>div.firepad>div.ace_editor {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -94,6 +100,13 @@
   -webkit-font-smoothing: antialiased;
   z-index: 1;
   width: fit-content;
+}
+
+#picker {
+  position: absolute;
+  z-index: 100;
+  display: block;
+  background: #fff;
 }
 </style>
   
@@ -221,9 +234,7 @@ export default defineComponent({
         self.updateKey++;
       });
 
-      editor.getSession().selection.on('changeCursor', function () {
-        self.$emit('changeCursor');
-      });
+      editor.getSession().selection.on('changeCursor', self.changeCursor);
 
       editor.commands.addCommands([{
         name: "findPanel",
@@ -359,6 +370,124 @@ export default defineComponent({
         this.$emit('changeTab');
       }
 
+    },
+    changeCursor: function (e, selection) {
+      // color picker
+      var tab = this.currentTab;
+      var editor = tab.editor;
+
+      if (!editor) {
+        return;
+      }
+
+      // Get the element with the id "picker"
+      document.getElementById("picker")?.remove();
+
+      var session = selection.session;
+      var pos = selection.getSelectionLead();
+      var line = session.getLine(pos.row);
+      var prefix = line.slice(0, pos.column);
+      var before = 0;
+      var value = '';
+      var rawValue = '';
+      var type = '';
+      var convertToRgb = false;
+      var el;
+      var offset;
+      var range;
+      var container = editor.container;
+
+      if (/(#[0-9a-f]*)$/i.test(prefix)) {
+        before = pos.column - RegExp.$1.length;
+
+        if (/(#[0-9a-f]*)/i.test(line.slice(before))) {
+          rawValue = RegExp.$1;
+        }
+
+        value = rawValue;
+
+        if (value.length == 4) {
+          value = '#' + value[1] + value[1] + value[2] + value[2] + value[3] + value[3];
+        }
+
+        type = 'color';
+        //rgb color picker
+      } else if (/rgb\(([0-9,\s]*)$/i.test(prefix)) {
+        before = pos.column - RegExp.$1.length;
+
+        rawValue = RegExp.$1;
+
+        if (/([0-9,\s]*)/i.test(line.slice(before))) {
+          rawValue = RegExp.$1;
+        }
+
+        value = rawValue.replace(/\s/g, '');
+
+        var rgb = value.split(',');
+        if (rgb.length >= 3) {
+          value = util.rgbToHex(rgb[0], rgb[1], rgb[2]);
+        }
+
+        type = 'color';
+        convertToRgb = true;
+      }
+
+      if (value) {
+        rawValue = rawValue ? rawValue : value;
+
+        range = {
+          start: {
+            row: pos.row,
+            column: before
+          },
+          end: {
+            row: pos.row,
+            column: before + rawValue.length
+          }
+        };
+
+        //charCoords
+        pos = editor.renderer.textToScreenCoordinates(range.start.row, range.start.column);
+        offset = util.getOffset(editor.container);
+        pos.pageX -= offset.left;
+        pos.pageY -= offset.top;
+
+        el = document.createElement('input');
+        el.type = type;
+
+        if (type == 'number') {
+          el.min = parseFloat(value) - 10;
+          el.max = parseFloat(value) + 10;
+          el.step = 1;
+        }
+
+        el.id = 'picker';
+        el.value = value ? value : rawValue;
+
+        //position picker
+        el.style.top = pos.pageY + 20 + "px";
+        el.style.left = pos.pageX + "px";
+
+        container.parentNode.appendChild(el);
+
+        el.onclick = function () {
+          selection.setSelectionRange(range);
+          this.focus();
+        };
+
+        el.onchange = function () {
+          var newValue = this.value;
+          if (convertToRgb) {
+            var rgb = util.hexToRgb(newValue);
+            newValue = rgb.r + ', ' + rgb.g + ', ' + rgb.b;
+          }
+
+          selection.setSelectionRange(range);
+          editor.insert(newValue);
+        };
+      }
+
+      this.$emit('changeCursor');
     },
     reload: function () {
       var tab = this.menuTab;
@@ -556,17 +685,17 @@ export default defineComponent({
       });
     },
 
-    applyPrefs: function(tab) {
+    applyPrefs: function (tab) {
       let editor = tab.editor;
-      if (editor) {        
-          let wordWrap = util.storageGet('wordWrap');
-          editor.getSession().setUseWrapMode(Boolean(wordWrap));
-          
-          let codeTheme = util.storageGet('codeTheme');
+      if (editor) {
+        let wordWrap = util.storageGet('wordWrap');
+        editor.getSession().setUseWrapMode(Boolean(wordWrap));
 
-          if (codeTheme) {
-            editor.setTheme("ace/theme/" + codeTheme);
-          }
+        let codeTheme = util.storageGet('codeTheme');
+
+        if (codeTheme) {
+          editor.setTheme("ace/theme/" + codeTheme);
+        }
       }
     }
 
