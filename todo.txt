@@ -8,11 +8,9 @@ New site
 - Google Drive
 - WebDav
 - Git
-Revision history
 Location Hash
 Share site
 Master Password
-Color picker
 
 Change branch - NEED virtual scroll https://github.com/vuetifyjs/vuetify/pull/17265
 New branch

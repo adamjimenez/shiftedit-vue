@@ -3271,7 +3271,7 @@
   "resolved" "https://registry.npmjs.org/detect-node/-/detect-node-2.1.0.tgz"
   "version" "2.1.0"
 
-"diff@5.1.0":
+"diff@^5.1.0", "diff@5.1.0":
   "integrity" "sha512-D+mk+qE8VC/PAUrlAU34N+VfXev0ghe5ywmpqrawphmVZc1bEfn56uo9qpyGp1p4xpzOHkSW4ztBd6L7Xx4ACw=="
   "resolved" "https://registry.npmjs.org/diff/-/diff-5.1.0.tgz"
   "version" "5.1.0"

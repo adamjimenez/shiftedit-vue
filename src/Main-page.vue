@@ -54,6 +54,8 @@
           <v-btn icon @click="saveFile">
             <v-icon>mdi-content-save</v-icon>
           </v-btn>
+
+          <revision-history :site-id="currentSiteId" :current-tab="currentTab"></revision-history>
         </template>
 
         <template v-for="user in users" :key="user.id">
@@ -83,7 +85,8 @@
           {{ selection.lead.row + 1 }}:{{ selection.lead.column + 1 }}
           <span v-if="!selection.empty">({{ selection.anchor.row + 1 }}:{{ selection.anchor.column + 1 }})</span>
         </v-btn>
-        <v-select v-model="mode" density="compact" :items="modes" item-title="caption"  item-value="mode" @update:modelValue="changeMode"></v-select>
+        <v-select v-model="mode" density="compact" :items="modes" item-title="caption" item-value="mode"
+          @update:modelValue="changeMode"></v-select>
 
       </v-footer>
 
@@ -140,6 +143,7 @@ import notesPanel from './components/notes-panel.vue'
 import gitPanel from './components/git-panel.vue'
 import prefsPanel from './components/prefs-panel.vue'
 import confirm from "./components/confirm-dialog.vue";
+import revisionHistory from "./components/revision-history.vue";
 
 export default {
   components: {
@@ -150,6 +154,7 @@ export default {
     gitPanel,
     prefsPanel,
     confirm,
+    revisionHistory,
   },
   data() {
     return {
@@ -164,7 +169,7 @@ export default {
         {
           id: 1,
           title: 'New tab',
-          text: 'yo'
+          text: ''
         },
       ],
       sites: [],
@@ -195,6 +200,7 @@ export default {
       selectedSite: {},
       mode: '',
       modes: [],
+      mounted: false,
     };
   },
   computed: {
@@ -212,7 +218,7 @@ export default {
       return site;
     },
     currentTab() {
-      return this.$refs.mainTabs.currentTab
+      return this.mounted ? this.$refs.mainTabs?.currentTab : {};
     },
   },
 
@@ -264,9 +270,7 @@ export default {
         return false;
       }
       await this.$nextTick();
-
       await this.$refs.treePanel.load();
-
       await this.$refs.git.load();
     },
     openFile(file, siteId, options) {
@@ -349,6 +353,11 @@ export default {
         }
 
         this.$refs.mainTabs.setSaved(tab.key);
+
+        //save revision for turbo mode or AJAX
+        if (this.currentSite.turbo > 0) {
+          await api.post('revisions?cmd=save&site=' + this.currentSite.id, params);
+        }
 
         if (close) {
           var fileTabs = this.$refs.mainTabs;
@@ -449,9 +458,9 @@ export default {
       this.changeCursor();
 
       let tab = this.currentTab;
-      let editor = tab.editor;
+      let editor = tab?.editor;
 
-      if (editor) {      
+      if (editor) {
         this.mode = editor.session.$modeId;
       }
     },
@@ -485,7 +494,7 @@ export default {
     },
 
     gitSync: async function () {
-      this.loading = true;      
+      this.loading = true;
       await this.$refs.git.sync();
       this.loading = false;
 
@@ -528,6 +537,8 @@ export default {
       if (unsaved)
         return true;
     };
+
+    this.mounted = true;
   },
 };
 </script>
