@@ -67,7 +67,7 @@
 
       <v-main>
         <v-container fluid class="pa-0" loading="true">
-          <tabs-chrome ref="mainTabs" @find="find" @open="openFile" @updateUsers="updateUsers" @save="saveFile"
+          <tabs-chrome ref="mainTabs" :sites="sites" @find="find" @open="openFile" @updateUsers="updateUsers" @save="saveFile"
             @saveAs="saveAs" @changeCursor="changeCursor" @changeTab="changeTab" @modes="updateModes" />
         </v-container>
 
@@ -273,7 +273,7 @@ export default {
       await this.$refs.treePanel.load();
       await this.$refs.git.load();
     },
-    openFile(file, siteId, options) {
+    openFile: async function(file, siteId, options) {
       let self = this;
 
       if (!siteId) {
@@ -300,6 +300,12 @@ export default {
           return;
       }
 
+      if (siteId != this.currentSiteId) {
+        console.log('yo')
+        this.currentSiteId = siteId;
+        await this.loadSite();
+      }
+
       let params = {
         file: file
       };
@@ -309,7 +315,6 @@ export default {
       api
         .post(this.currentSite.apiBaseUrl + '&cmd=open&file=' + encodeURIComponent(file), params)
         .then(response => {
-          console.log(response);
           if (response.data.error) {
             alert(response.data.error);
             return;

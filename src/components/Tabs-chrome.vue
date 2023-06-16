@@ -28,10 +28,10 @@
             <!-- DO NOT REMOVE THIS COMMENT -->
 
             <div style="
-                    display: flex;
-                    flex: 1;
-                    position: relative;
-                ">
+                          display: flex;
+                          flex: 1;
+                          position: relative;
+                      ">
               <div :ref="'firepad_' + tab.key"></div>
             </div>
 
@@ -138,6 +138,9 @@ export default defineComponent({
     Vue3TabsChrome,
     //VAceEditor,
   },
+  props: {
+    sites: null,
+  },
   computed: {
     currentTab() {
       let self = this;
@@ -159,9 +162,18 @@ export default defineComponent({
       deep: true,
     },
     currentTab() {
+      this.updateHash();
+
       var title = this.currentTab.key ? this.currentTab.key : 'ShiftEdit';
       document.title = title;
       this.$emit('changeTab');
+    },
+    sites() {
+      if (this.hashLoaded) {
+        return;
+      }
+      this.loadHash();
+      this.hashLoaded = true;
     }
   },
   data() {
@@ -177,9 +189,22 @@ export default defineComponent({
       menuY: 0,
       menuTab: null,
       promptUnsaved: false,
+      ignoreChange: 0,
+      hashLoaded: false,
     };
   },
   methods: {
+    getSite: function (val) {
+      var key = isNaN(val) ? 'name' : 'id';
+      let site = {};
+
+      this.sites.forEach(function (item) {
+        if (item[key] === val) {
+          site = item;
+        }
+      })
+      return site;
+    },
     editorInit: function (tab) {
       // Get a Vue ref to the Firepad element
 
@@ -354,7 +379,7 @@ export default defineComponent({
       this.applyPrefs(tab);
 
       // FIXME get settings
-      var settings = {};
+      var settings = this.getSite(tab.site);
       if (tab.site && settings.shared) {
         //firepad = true;
 
@@ -372,6 +397,8 @@ export default defineComponent({
 
     },
     changeCursor: function (e, selection) {
+      this.updateHash();
+
       // color picker
       var tab = this.currentTab;
       var editor = tab.editor;
@@ -697,6 +724,102 @@ export default defineComponent({
           editor.setTheme("ace/theme/" + codeTheme);
         }
       }
+    },
+
+    loadHash: function () {
+      if (this.ignoreChange) {
+        this.ignoreChange--;
+        return;
+      }
+
+      var self = this;
+      var hash = window.location.hash.substr(1);
+      hash = decodeURIComponent(hash);
+
+      var files = [];
+      if (hash) {
+        //protect from xss
+        if (hash.indexOf('<') !== -1) {
+          console.warn('"<" in file name');
+          return;
+        }
+
+        var line = 0;
+        files = hash.split('|');
+        files.forEach(function (path) {
+          var siteName, file;
+          var pos = path.indexOf('/');
+
+          if (pos !== -1) {
+            siteName = path.substr(0, pos);
+            file = path.substr(pos + 1);
+
+            pos = file.indexOf(':');
+            if (pos !== -1) {
+              line = file.substr(pos + 1);
+              file = file.substr(0, pos);
+            }
+          } else {
+            siteName = path
+          }
+
+          var settings = self.getSite(siteName);
+
+          if (!settings) {
+            return;
+          }
+          
+          self.$emit('open', file, settings.id, {
+            callback: function (tab) {
+              if (!tab) {
+                return;
+              }
+
+              // restore cursor position
+              var editor = tab.editor;
+              editor.gotoLine(line);
+              editor.focus();
+            }
+          });
+        });
+      }
+    },
+    updateHash: function () {
+      //update hash based on currently open file
+      var hashVal = '';
+      if (this.currentTab.site) {
+        var settings = this.getSite(this.currentTab.site);
+        hashVal += settings.name + '/';
+      }
+
+      hashVal += this.currentTab.key ? this.currentTab.key : '';
+
+      // cursor pos
+      if (this.currentTab) {
+        var editor = this.currentTab.editor;
+        if (editor) {
+          var sel = editor.session.getSelection();
+          hashVal += ':' + (sel.lead.row + 1);
+        }
+      }
+
+      this.setHash(hashVal, true);
+    },
+    setHash: function (value, ignore) {
+      if (value) {
+        if (ignore) {
+          this.ignoreChange++;
+        }
+
+        window.location.hash = '#' + value;
+
+        // trigger update on initial load
+        if (!ignore && '#' + value === window.location.hash) {
+          this.loadHash();
+        }
+      } else {
+        history.pushState("", document.title, window.location.pathname + window.location.search);
+      }
     }
 
   },
@@ -774,6 +897,8 @@ export default defineComponent({
       }
     }, false);
 
+    // hash change
+    window.addEventListener('hashchange', this.loadHash);
   }
 })
 </script>
