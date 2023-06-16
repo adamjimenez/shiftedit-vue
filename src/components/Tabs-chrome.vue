@@ -533,9 +533,7 @@ export default defineComponent({
     closeFile() {
       this.tabRef.removeTab(this.currentTab.key)
     },
-    onClose(tab, key, index) {
-      console.log(tab, key, index)
-
+    onClose(tab) {
       // TODO confirm close if edited
       if (tab.unsaved) {
         // show save changes prompt
@@ -544,23 +542,20 @@ export default defineComponent({
       }
 
       let editor = tab.editor;
-
       var firepad = window.firepads[tab.key];
-      //var firepadUserList = $(tab).data('firepadUserList');
-      //var firepadRef = tab.firepadRef;
-      //remove firepad if last user
-      //if (firepadUserList && Object.keys(firepadUserList.users).length == 1) {
-      //console.log('remove firepad session');
-      //firepadRef.off('value');
-      //firepadRef.remove();
-      //}
+      var firepadUserList = window.firepadUserLists[tab.key];
+      var firepadRef = window.firepadRefs[tab.key];
 
-      /*
+      //remove firepad if last user      
+      if (firepadUserList && tab.users.length == 1) {
+        console.log('remove firepad session');
+        firepadRef.off('value');
+        firepadRef.remove();
+      }
+      
       if (firepadUserList) {
         firepadUserList.dispose();
-        $(tab).data('firepadUserList', false);
-      }
-      */
+      }      
 
       try {
         if (firepad) {
@@ -758,10 +753,9 @@ export default defineComponent({
         }
       }, function () {
         console.log('firepad permission denied');
-        //self.removeFirepad();
-        //editor.getSession().setValue(content);
-        //editor.moveCursorToPosition({column:0, row:0});
-        //loadmask.hide();
+        self.removeFirepad(tab);
+        editor.getSession().setValue(content);
+        editor.moveCursorToPosition({column:0, row:0});
       });
 
       // Create FirepadUserList (with our desired userId)

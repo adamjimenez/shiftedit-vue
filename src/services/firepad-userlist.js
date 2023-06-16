@@ -17,6 +17,8 @@ export default {
             }
         });
 		this.makeUserEntriesForOthers_();
+
+        return this;
     },
 
     dispose: function () {
@@ -99,19 +101,6 @@ export default {
 
             // update tab
             self.tab.updateKey++;
-
-            /*
-            if (userId !== self.userId_ && !$('#button_' + userId).length) {
-                //add user button
-                //$('#chatButton').before('<li id="button_'+ userId +'"><a class="user" href="#" data-user="'+ userId +'">'+ name +'</a></li>').prev().css('background', color);
-
-                //rebuild menubar
-                $('#menubar').menubar('destroy');
-                $('#menubar').menubar();
-
-                //$('#chatButton').removeClass('ui-state-disabled');
-            }
-            */
 
             //cursor label
             var cursor = userSnapshot.child('cursor').val();

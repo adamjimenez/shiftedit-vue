@@ -491,7 +491,6 @@ export default {
       }
 
       var selection = editor.session.getSelection();
-
       this.selection.lead.row = selection.lead.row;
       this.selection.lead.column = selection.lead.column;
       this.selection.anchor.row = selection.anchor.row;

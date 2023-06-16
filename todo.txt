@@ -1,4 +1,3 @@
-Clear firepad if last user
 Find in open
 New site
 - FTP
