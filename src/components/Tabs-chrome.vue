@@ -28,10 +28,10 @@
             <!-- DO NOT REMOVE THIS COMMENT -->
 
             <div style="
-                              display: flex;
-                              flex: 1;
-                              position: relative;
-                          ">
+                                  display: flex;
+                                  flex: 1;
+                                  position: relative;
+                              ">
               <div :ref="'firepad_' + tab.key"></div>
             </div>
 
@@ -193,6 +193,32 @@ export default defineComponent({
     };
   },
   methods: {
+    nextTab: function () {
+      // Find the index of the item with the given key.
+      let index = this.tabs.findIndex(item => item.key === this.tab);
+
+      if (index >= this.tabs.length - 1) {
+        index = -1;
+      }
+      
+      // If the item was found, return the next item in the array.
+      this.tab = this.tabs[index + 1].key;
+
+      return;
+    },
+    prevTab: function () {
+      // Find the index of the item with the given key.
+      let index = this.tabs.findIndex(item => item.key === this.tab);
+
+      if (index == 0) {
+        index = this.tabs.length;
+      }
+      
+      // If the item was found, return the prev item in the array.
+      this.tab = this.tabs[index - 1].key;
+
+      return;
+    },
     getSite: function (val) {
       var key = isNaN(val) ? 'name' : 'id';
       let site = {};
@@ -552,10 +578,10 @@ export default defineComponent({
         firepadRef.off('value');
         firepadRef.remove();
       }
-      
+
       if (firepadUserList) {
         firepadUserList.dispose();
-      }      
+      }
 
       try {
         if (firepad) {
@@ -755,7 +781,7 @@ export default defineComponent({
         console.log('firepad permission denied');
         self.removeFirepad(tab);
         editor.getSession().setValue(content);
-        editor.moveCursorToPosition({column:0, row:0});
+        editor.moveCursorToPosition({ column: 0, row: 0 });
       });
 
       // Create FirepadUserList (with our desired userId)

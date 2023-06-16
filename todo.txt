@@ -1,4 +1,3 @@
-Find in open
 New site
 - FTP
 - SFTP
