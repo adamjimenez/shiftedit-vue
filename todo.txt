@@ -8,7 +8,6 @@ New site
 - Google Drive
 - WebDav
 - Git
-Share site
 Master Password
 
 Change branch - NEED virtual scroll https://github.com/vuetifyjs/vuetify/pull/17265

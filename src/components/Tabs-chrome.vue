@@ -28,10 +28,10 @@
             <!-- DO NOT REMOVE THIS COMMENT -->
 
             <div style="
-                          display: flex;
-                          flex: 1;
-                          position: relative;
-                      ">
+                              display: flex;
+                              flex: 1;
+                              position: relative;
+                          ">
               <div :ref="'firepad_' + tab.key"></div>
             </div>
 
@@ -136,7 +136,6 @@ import ace from 'ace-builds/src-noconflict/ace';
 export default defineComponent({
   components: {
     Vue3TabsChrome,
-    //VAceEditor,
   },
   props: {
     sites: null,
@@ -272,124 +271,14 @@ export default defineComponent({
         }
       }]);
 
-      var addFirepad = function (tab) {
-        var content = '';
-        var editor = tab.editor;
-
-        if (editor.getValue()) {
-          content = editor.getValue();
-        } else {
-          // FIXME
-          content = tab.content;
-        }
-        content = content.replace(/\r\n/g, "\n");
-        editor.setValue('');
-
-        var options = {};
-        if (typeof content === 'string') {
-          options.content = content;
-        }
-
-        var siteId = tab.site;
-        var file = tab.key;
-        var doc_name = siteId + '/' + file;
-        // firebase doesn't allow ".", "#", "$", "[", or "]"
-        doc_name = doc_name.split('.').join('_');
-        doc_name = doc_name.split('[').join('(');
-        doc_name = doc_name.split(']').join(')');
-
-        var url = "https://shiftedit.firebaseio.com/sites/";
-
-        //$(tab).trigger('firebaseon');
-
-        var firebaseUrl = url + doc_name;
-        var firebaseDatabase = window.firebaseDatabase;
-        var firepadRef = firebaseDatabase.refFromURL(firebaseUrl);
-
-        //firepadRef = 'public/firepad-test-database'
-
-        window.firepadRefs[tab.key] = firebase.database().ref(firepadRef);
-
-        console.log('add firepad for ' + firepadRef);
-
-        // Create Firepad.
-        window.firepads[tab.key] = Firepad.fromACE(window.firepadRefs[tab.key], editor, {
-          userId: util.storageGet('user'),
-          defaultText: content
-        });
-
-        // close tab on dispose FIXME
-        firepadRef.on('value', function (snapshot) {
-          // you could just check "snapshot.val() == null" here, but it's much cheaper to check for children so do that first.
-          if (!snapshot.hasChildren() && snapshot.val() === null) {
-            console.log('firebase was removed');
-            //tabs.setEdited(tab, false);
-            //tabs.close(tab);
-          }
-        }, function () {
-          console.log('firepad permission denied');
-          //removeFirepad();
-          //editor.getSession().setValue(content);
-          //editor.moveCursorToPosition({column:0, row:0});
-          //loadmask.hide();
-        });
-
-        // Create FirepadUserList (with our desired userId)
-        window.firepadUserLists[tab.key] = FirepadUserList.fromDiv(firepadRef.child('users'), util.storageGet('user'), util.storageGet('username'), tab);
-
-        var firepad = window.firepads[tab.key]
-        firepad.on('ready', function () {
-          // set initial edited state
-          if (firepad.isHistoryEmpty()) {
-            console.log('new firepad session');
-            //firepad.setText(content);
-            //editor.getSession().getUndoManager().reset();
-            //tabs.setEdited(tab, edited);
-            /*
-          }else if( typeof content === 'string' && editor.getValue() !== options.content ){
-            console.log('firepad session has changes');
-            //tabs.setEdited(tab, true);
-          }else if(editor.getValue() === options.content){
-            console.log('firepad session is the same');
-            //tabs.setEdited(tab, false);
-            */
-          }
-
-          var saveRef = firepadRef.child('save');
-          saveRef.on('value', function () {
-            if (!firepad) {
-              return;
-            }
-
-            var revision = firepad.firebaseAdapter_.revision_;
-            console.log('current revision: ' + revision);
-            self.setSaved(tab.key);
-          });
-
-          self.$emit('changeTab');
-        })
-
-      }
-
       tab.editor = editor;
 
       //FIREPAD
-      //var firepad = false;
-
       this.applyPrefs(tab);
 
-      // FIXME get settings
       var settings = this.getSite(tab.site);
       if (tab.site && settings.shared) {
-        //firepad = true;
-
-        if (!this.firebaseConnected) {
-          this.firebaseConnect(function () {
-            addFirepad(tab);
-          });
-        } else {
-          addFirepad(tab);
-        }
+        this.addFirepad(tab);
       } else {
         this.setContent(tab, tab.content);
         this.$emit('changeTab');
@@ -533,14 +422,8 @@ export default defineComponent({
       this.currentTab.editor.gotoLine(line, 0);
       this.currentTab.editor.focus();
     },
-    firebaseConnect: function (callback) {
+    firebaseConnect: function () {
       var self = this;
-
-      var callbacks = [];
-
-      if (callback) {
-        callbacks.push(callback);
-      }
 
       if (this.firebaseConnected || this.firebaseConnecting) {
         return;
@@ -574,7 +457,7 @@ export default defineComponent({
       // Log me in.
       var newAuthToken = util.storageGet('newAuthToken');
 
-      firebase.auth().signInWithCustomToken(newAuthToken)
+      return firebase.auth().signInWithCustomToken(newAuthToken)
         .catch(function (error) {
           //var errorCode = error.code;
           //var errorMessage = error.message;
@@ -602,14 +485,6 @@ export default defineComponent({
             console.log('reconnect to firebase');
             self.firebaseConnect();
           }, 3600 * 1000);
-
-          // process callbacks
-          if (callbacks.length) {
-            while (callbacks.length) {
-              var func = callbacks.shift();
-              func();
-            }
-          }
         });
     },
     setTabRef: function (el) {
@@ -768,7 +643,7 @@ export default defineComponent({
           if (!settings) {
             return;
           }
-          
+
           self.$emit('open', file, settings.id, {
             callback: function (tab) {
               if (!tab) {
@@ -819,6 +694,134 @@ export default defineComponent({
         }
       } else {
         history.pushState("", document.title, window.location.pathname + window.location.search);
+      }
+    },
+
+    addFirepad: async function (tab) {
+      if (!this.firebaseConnected) {
+        await this.firebaseConnect();
+      }
+
+      var self = this;
+      var content = '';
+      var editor = tab.editor;
+
+      if (editor.getValue()) {
+        content = editor.getValue();
+      } else {
+        // FIXME
+        content = tab.content;
+      }
+      content = content.replace(/\r\n/g, "\n");
+      editor.setValue('');
+
+      var options = {};
+      if (typeof content === 'string') {
+        options.content = content;
+      }
+
+      var siteId = tab.site;
+      var file = tab.key;
+      var doc_name = siteId + '/' + file;
+      // firebase doesn't allow ".", "#", "$", "[", or "]"
+      doc_name = doc_name.split('.').join('_');
+      doc_name = doc_name.split('[').join('(');
+      doc_name = doc_name.split(']').join(')');
+
+      var url = "https://shiftedit.firebaseio.com/sites/";
+
+      //$(tab).trigger('firebaseon');
+
+      var firebaseUrl = url + doc_name;
+      var firebaseDatabase = window.firebaseDatabase;
+      var firepadRef = firebaseDatabase.refFromURL(firebaseUrl);
+
+      //firepadRef = 'public/firepad-test-database'
+
+      window.firepadRefs[tab.key] = firebase.database().ref(firepadRef);
+
+      console.log('add firepad for ' + firepadRef);
+
+      // Create Firepad.
+      window.firepads[tab.key] = Firepad.fromACE(window.firepadRefs[tab.key], editor, {
+        userId: util.storageGet('user'),
+        defaultText: content
+      });
+
+      // close tab on dispose FIXME
+      firepadRef.on('value', function (snapshot) {
+        // you could just check "snapshot.val() == null" here, but it's much cheaper to check for children so do that first.
+        if (!snapshot.hasChildren() && snapshot.val() === null) {
+          console.log('firebase was removed');
+          //tabs.setEdited(tab, false);
+          //tabs.close(tab);
+        }
+      }, function () {
+        console.log('firepad permission denied');
+        //self.removeFirepad();
+        //editor.getSession().setValue(content);
+        //editor.moveCursorToPosition({column:0, row:0});
+        //loadmask.hide();
+      });
+
+      // Create FirepadUserList (with our desired userId)
+      window.firepadUserLists[tab.key] = FirepadUserList.fromDiv(firepadRef.child('users'), util.storageGet('user'), util.storageGet('username'), tab);
+
+      var firepad = window.firepads[tab.key]
+      firepad.on('ready', function () {
+        // set initial edited state
+        if (firepad.isHistoryEmpty()) {
+          console.log('new firepad session');
+          //firepad.setText(content);
+          //editor.getSession().getUndoManager().reset();
+          //tabs.setEdited(tab, edited);
+          /*
+        }else if( typeof content === 'string' && editor.getValue() !== options.content ){
+          console.log('firepad session has changes');
+          //tabs.setEdited(tab, true);
+        }else if(editor.getValue() === options.content){
+          console.log('firepad session is the same');
+          //tabs.setEdited(tab, false);
+          */
+        }
+
+        var saveRef = firepadRef.child('save');
+        saveRef.on('value', function () {
+          if (!firepad) {
+            return;
+          }
+
+          var revision = firepad.firebaseAdapter_.revision_;
+          console.log('current revision: ' + revision);
+          self.setSaved(tab.key);
+        });
+
+        self.$emit('changeTab');
+      })
+    },
+    removeFirepad: function (tab) {
+      var firepad = window.firepads[tab.key];
+      var firepadUserList = window.firepadUserLists[tab.key];
+      var firepadRef = window.firepadRefs[tab.key];
+
+      //remove firepad if last user
+      if (firepadUserList && Object.keys(firepadUserList.users).length == 1) {
+        console.log('remove firepad session');
+        firepadRef.off('value');
+        firepadRef.remove();
+      }
+
+      if (firepadUserList) {
+        firepadUserList.dispose();
+        delete window.firepadUserLists[tab.key];
+      }
+
+      if (firepad) {
+        try {
+          firepad.dispose();
+        } catch (e) {
+          console.log(e);
+        }
       }
     }
 

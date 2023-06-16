@@ -67,8 +67,8 @@
 
       <v-main>
         <v-container fluid class="pa-0" loading="true">
-          <tabs-chrome ref="mainTabs" :sites="sites" @find="find" @open="openFile" @updateUsers="updateUsers" @save="saveFile"
-            @saveAs="saveAs" @changeCursor="changeCursor" @changeTab="changeTab" @modes="updateModes" />
+          <tabs-chrome ref="mainTabs" :sites="sites" @find="find" @open="openFile" @updateUsers="updateUsers"
+            @save="saveFile" @saveAs="saveAs" @changeCursor="changeCursor" @changeTab="changeTab" @modes="updateModes" />
         </v-container>
 
         <v-progress-linear v-if="loading" indeterminate></v-progress-linear>
@@ -90,11 +90,13 @@
 
       </v-footer>
 
+      <notification-alert @update="fetchSites"></notification-alert>
+
       <v-menu v-model="siteMenu" :style="'left: ' + menuX + 'px; top: ' + menuY + 'px;'">
         <v-btn text block>New</v-btn>
         <v-btn text block>Edit</v-btn>
         <v-btn text block @click="deleteSite">Delete</v-btn>
-        <v-btn text block>Share</v-btn>
+        <v-btn text block @click="shareSite">Share</v-btn>
         <v-btn text block @click="database"
           :disabled="!currentSiteId || currentSite.db_phpmyadmin === ''">Database</v-btn>
       </v-menu>
@@ -111,12 +113,39 @@
         </v-card>
       </v-dialog>
 
+      <v-dialog v-model="shareSiteDialog" width="500">
+        <v-card>
+          <v-card-title>
+            Share site {{ currentSite.name }}
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col style="flex: 20">
+                <v-autocomplete v-model="shareEmail" label="Email" :items="contacts" item-title="name"
+                  item-value="email"></v-autocomplete>
+              </v-col>
+              <v-col>
+                <v-btn :disabled="shareEmail == ''" :loading="loading">
+                  <v-icon @click="addSiteUser">mdi-account-plus</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+
+            <v-list lines="one">
+              <v-list-item v-for="item in shared" :key="item.id" :title="item.name" append-icon="mdi-close"
+                @click="removeSiteUser(item.id)"></v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
       <form id="pma_form" method="post" target="_blank" :action="currentSite.db_phpmyadmin">
         <input type="hidden" name="pma_username" :value="currentSite.db_username">
         <input type="hidden" name="pma_password" :value="currentSite.db_password">
       </form>
 
       <confirm ref="confirm" />
+
     </v-app>
   </div>
 </template>
@@ -144,6 +173,7 @@ import gitPanel from './components/git-panel.vue'
 import prefsPanel from './components/prefs-panel.vue'
 import confirm from "./components/confirm-dialog.vue";
 import revisionHistory from "./components/revision-history.vue";
+import notificationAlert from "./components/notification-alert.vue";
 
 export default {
   components: {
@@ -155,6 +185,7 @@ export default {
     prefsPanel,
     confirm,
     revisionHistory,
+    notificationAlert,
   },
   data() {
     return {
@@ -201,6 +232,11 @@ export default {
       mode: '',
       modes: [],
       mounted: false,
+      shareSiteDialog: false,
+      shareEmail: '',
+      shared: [],
+      contacts: [],
+      paused: false,
     };
   },
   computed: {
@@ -273,7 +309,7 @@ export default {
       await this.$refs.treePanel.load();
       await this.$refs.git.load();
     },
-    openFile: async function(file, siteId, options) {
+    openFile: async function (file, siteId, options) {
       let self = this;
 
       if (!siteId) {
@@ -301,7 +337,6 @@ export default {
       }
 
       if (siteId != this.currentSiteId) {
-        console.log('yo')
         this.currentSiteId = siteId;
         await this.loadSite();
       }
@@ -417,12 +452,11 @@ export default {
     deleteSite: async function () {
       if (
         await this.$refs.confirm.open(
-          "Delete site " + this.selectedSite.raw.name,
+          "Delete site " + this.selectedSite.name,
           "Are you sure?"
         )
       ) {
-        var params = {};
-        let response = await api.post('sites?cmd=delete&site=' + this.selectedSite.raw.id, params);
+        let response = await api.post('sites?cmd=delete&site=' + this.selectedSite.id, {});
 
         if (response.data.error) {
           alert(response.data.error);
@@ -431,6 +465,12 @@ export default {
 
         this.fetchSites();
       }
+    },
+
+    shareSite() {
+      this.shareSiteDialog = true;
+
+      this.loadSiteUsers(this.currentSiteId);
     },
 
     database() {
@@ -471,7 +511,6 @@ export default {
     },
 
     updateGit(data) {
-      console.log(data)
       this.branches = data.branches;
       this.branch = this.$refs.git.currentBranch;
     },
@@ -505,7 +544,68 @@ export default {
 
       await this.$refs.treePanel.load();
       this.$refs.mainTabs.reloadActive();
-    }
+    },
+
+    loadSiteUsers: async function (siteId) {
+      let response = await api.post('share?cmd=list&site=' + siteId);
+
+      if (response.data.error) {
+        alert(response.data.error);
+        return;
+      }
+
+      this.shared = response.data.shared;
+      this.contacts = response.data.contacts;
+
+      var shared = response.data.shared.length ? true : false;
+
+      if (this.currentSite.shared != shared) {
+        console.log('toggle shared');
+
+        // toggle firepad from open files
+        var addFirepad = shared ? true : false;
+
+        var self = this;
+        this.$refs.mainTabs.tabs.forEach(function (item) {
+          if (item.site == siteId) {
+            if (addFirepad) {
+              self.$refs.mainTabs.addFirepad(item);
+            } else {
+              self.$refs.mainTabs.removeFirepad(item);
+            }
+          }
+        });
+
+        await this.fetchSites();
+      }
+    },
+
+    addSiteUser: async function () {
+      var siteId = this.currentSiteId;
+      this.loading = true;
+      let response = await api.post('share?cmd=save&site=' + siteId + '&email=' + this.shareEmail);
+      this.loading = false;
+      this.shareEmail = '';
+
+      if (response.data.error) {
+        alert(response.data.error);
+        return;
+      }
+
+      this.loadSiteUsers(siteId);
+    },
+
+    removeSiteUser: async function (shareId) {
+      var siteId = this.currentSiteId;
+      let response = await api.post('share?cmd=delete&site=' + siteId + '&contact=' + shareId);
+
+      if (response.data.error) {
+        alert(response.data.error);
+        return;
+      }
+
+      this.loadSiteUsers(siteId);
+    },
   },
   created: async function () {
     await util.fetchPreferences();
@@ -544,6 +644,13 @@ export default {
     };
 
     this.mounted = true;
+
+    window.addEventListener('blur', function () {
+      self.paused = true;
+    });
+    window.addEventListener('focus', function () {
+      self.paused = false;
+    });
   },
 };
 </script>
