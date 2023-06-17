@@ -63,7 +63,7 @@ export default {
             this.loading = true;
 
             api
-                .post(this.currentSite.apiBaseUrl + '&cmd=get', params)
+                .post(this.currentSite.apiUrl + '&cmd=get', params)
                 .then(response => {
                     if (response.data.error) {
                         alert(response.data.error);

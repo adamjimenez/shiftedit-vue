@@ -171,7 +171,7 @@ export default {
             }
 
             this.loading = true;
-            let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=git_info', params);
+            let response = await api.post(this.currentSite.apiUrl + '&cmd=git_info', params);
             this.loading = false;
 
             if (response.data.error) {

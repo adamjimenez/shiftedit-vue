@@ -93,8 +93,8 @@
       <notification-alert @update="fetchSites"></notification-alert>
 
       <v-menu v-model="siteMenu" :style="'left: ' + menuX + 'px; top: ' + menuY + 'px;'">
-        <v-btn text block>New</v-btn>
-        <v-btn text block>Edit</v-btn>
+        <v-btn text block @click="$refs.siteDialog.newSite">New</v-btn>
+        <v-btn text block @click="$refs.siteDialog.editSite(selectedSite)">Edit</v-btn>
         <v-btn text block @click="deleteSite">Delete</v-btn>
         <v-btn text block @click="shareSite">Share</v-btn>
         <v-btn text block @click="database"
@@ -139,6 +139,8 @@
         </v-card>
       </v-dialog>
 
+      <site-dialog ref="siteDialog" @save="saveSite"></site-dialog>
+
       <form id="pma_form" method="post" target="_blank" :action="currentSite.db_phpmyadmin">
         <input type="hidden" name="pma_username" :value="currentSite.db_username">
         <input type="hidden" name="pma_password" :value="currentSite.db_password">
@@ -174,6 +176,7 @@ import prefsPanel from './components/prefs-panel.vue'
 import confirm from "./components/confirm-dialog.vue";
 import revisionHistory from "./components/revision-history.vue";
 import notificationAlert from "./components/notification-alert.vue";
+import siteDialog from "./components/site-dialog.vue";
 
 export default {
   components: {
@@ -186,6 +189,7 @@ export default {
     confirm,
     revisionHistory,
     notificationAlert,
+    siteDialog,
   },
   data() {
     return {
@@ -249,7 +253,12 @@ export default {
         }
       })
 
-      site.apiBaseUrl = site.turbo > 0 ? site.web_url + '/shiftedit-proxy.php?ModPagespeed=off' : '/api/';
+      site.apiBaseUrl = site.turbo > 0 ? site.web_url + '/shiftedit-proxy.php?ModPagespeed=off' : '';
+
+      site.apiUrl = site.apiBaseUrl;
+      if (site.turbo <= 0) {
+        site.apiUrl += 'files?site=' + site.id;
+      }
 
       return site;
     },
@@ -285,6 +294,12 @@ export default {
 
       this.rail = false;
       this.nav = nav;
+    },
+
+    saveSite: async function (siteId) {
+      await this.fetchSites();
+      this.currentSiteId = siteId;
+      this.loadSite();
     },
 
     fetchSites() {
@@ -346,27 +361,23 @@ export default {
       };
 
       this.loading = true;
+      var response = await api.post(this.currentSite.apiUrl + '&cmd=open&file=' + encodeURIComponent(file), params);
+      this.loading = false;
 
-      api
-        .post(this.currentSite.apiBaseUrl + '&cmd=open&file=' + encodeURIComponent(file), params)
-        .then(response => {
-          if (response.data.error) {
-            alert(response.data.error);
-            return;
-          }
+      if (response.data.error) {
+        this.error = response.data.error;
+        return;
+      }
 
-          fileTabs.openFile({
-            id: file,
-            site: self.currentSite.id,
-            title: util.baseName(file),
-            key: file,
-            content: response.data.content,
-            errors: [],
-            currentError: 0,
-          })
-        })
-        .catch(error => console.log(error))
-        .finally(() => self.loading = false);
+      fileTabs.openFile({
+        id: file,
+        site: self.currentSite.id,
+        title: util.baseName(file),
+        key: file,
+        content: response.data.content,
+        errors: [],
+        currentError: 0,
+      })
     },
 
     saveFile: async function (close) {
@@ -385,7 +396,7 @@ export default {
       this.loading = true;
 
       try {
-        let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=save&file=' + encodeURIComponent(tab.id), params);
+        let response = await api.post(this.currentSite.apiUrl + '&cmd=save&file=' + encodeURIComponent(tab.id), params);
         console.log(response);
         if (response.data.error) {
           alert(response.data.error);
