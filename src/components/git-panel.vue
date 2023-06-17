@@ -1,5 +1,11 @@
 <template>
-    <v-card class="align-start flex-column flex" style="max-height: 100%;">
+    <div v-if="notAvailable" class="pa-3">
+        <p>Not available:</p>
+        <p>
+            {{ notAvailable }}
+        </p>
+    </div>
+    <v-card class="align-start flex-column flex" style="max-height: 100%;" v-else>
         <v-tabs v-model="tab">
             <v-tab value="changes">
                 <v-icon>mdi-folder</v-icon>
@@ -161,6 +167,7 @@ export default {
             diffDialog: false,
             diffTitle: '',
             diffContent: '',
+            notAvailable: '',
         }
     },
     methods: {
@@ -170,12 +177,13 @@ export default {
                 pass: util.sha1(this.currentSite.ftp_pass),
             }
 
+            this.notAvailable = '';
             this.loading = true;
             let response = await api.post(this.currentSite.apiUrl + '&cmd=git_info', params);
             this.loading = false;
 
             if (response.data.error) {
-                alert(response.data.error);
+                this.notAvailable = response.data.error;
                 return;
             }
 

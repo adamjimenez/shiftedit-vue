@@ -33,22 +33,32 @@
                     <v-text-field v-model="site.name" label="Name" density="compact" @change="updateName"></v-text-field>
                     <v-text-field v-model="site.domain" label="Host" density="compact"></v-text-field>
 
-                    <v-btn-toggle v-model="site.auth" v-if="site.server_type === 'sftp'">
-                        <v-btn value="password">
+                    <v-btn-toggle v-model="site.logon_type" v-if="site.server_type === 'sftp'">
+                        <v-btn value="">
                             Password
                         </v-btn>
-                        <v-btn value="pubkey">
+                        <v-btn value="key">
                             Public Key
                         </v-btn>
                     </v-btn-toggle>
 
                     <v-text-field v-model="site.ftp_user" label="Username" density="compact"></v-text-field>
-                    <v-text-field v-model="site.ftp_pass" label="Password" density="compact" @change="findPath"
+                    <v-text-field v-model="site.ftp_pass" label="Password" density="compact"
+                        v-if="site.server_type !== 'sftp' || site.logon_type !== 'key'"
+                        @change="findPath"
                         :append-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'" :type="showPassword ? 'text' : 'password'"
                         @click:append="showPassword = !showPassword"></v-text-field>
-                    <v-text-field label="SSH key" density="compact" v-if="site.server_type === 'sftp'"></v-text-field>
+                    <v-text-field v-model="sshKey" label="SSH key" density="compact" v-if="site.server_type === 'sftp' && site.logon_type === 'key'" readonly
+                                    append-icon="mdi-content-copy"
+                                    @click:append="copy(sshKey)"></v-text-field>
                     <v-text-field v-model="site.dir" label="Path" density="compact"></v-text-field>
                     <v-text-field v-model="site.web_url" label="Website URL" density="compact"></v-text-field>
+
+                    <v-btn-toggle v-model="site.turbo" :disabled="site.web_url === ''" v-if="['ftp', 'sftp'].indexOf(site.server_type) !== -1">
+                        <v-btn value="1">
+                            Turbo mode
+                        </v-btn>
+                    </v-btn-toggle>
 
                     <v-expansion-panels>
                         <v-expansion-panel title="Advanced">
@@ -79,6 +89,7 @@
 
 <script>
 import api from "./../services/api";
+import util from "./../services/util";
 
 export default {
     props: {
@@ -87,6 +98,7 @@ export default {
     data() {
         return {
             error: '',
+            sshKey: '',
             dialog: false,
             showPassword: false,
             showDBPassword: false,
@@ -101,6 +113,9 @@ export default {
     watch: {
     },
     methods: {
+        copy: function (text) {
+            util.copy(text);
+        },
         newSite: function () {
             this.site = this.defaultSite;
             this.dialog = true;
@@ -118,8 +133,6 @@ export default {
                 this.error = response.data.error;
                 return;
             }
-
-            console.log(response.data);
 
             this.dialog = false;
             this.$emit('save', response.data.site);
@@ -153,8 +166,6 @@ export default {
                 return;
             }
 
-            console.log(response.data);
-
             response.data.files.forEach(function (item) {
                 if (item.text.match(/^public|public_html|httpdocs$/)) {
                     self.site.dir = item.text;
@@ -165,6 +176,7 @@ export default {
     },
 
     mounted() {
+        this.sshKey = util.storageGet('public_key');
     },
 };
 </script>
