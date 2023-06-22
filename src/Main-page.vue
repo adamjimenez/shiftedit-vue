@@ -42,7 +42,7 @@
               <git-panel ref="git" :tabs="$refs.mainTabs" v-show="nav === 'git'" :current-site="currentSite"
                 class="align-start flex-column" @open="openFile" @load="updateGit" />
               <div v-show="nav === 'prefs'" style="height: 100%;">
-                <prefs-panel ref="prefsPanel" :tabs="$refs.mainTabs" />
+                <prefs-panel ref="prefsPanel" :tabs="$refs.mainTabs" @error="handleError" />
               </div>
             </v-col>
           </v-row>
@@ -147,6 +147,8 @@
       </form>
 
       <confirm ref="confirm" />
+      <alert ref="alert" />
+      <prompt ref="prompt" />
 
     </v-app>
   </div>
@@ -174,6 +176,8 @@ import notesPanel from './components/notes-panel.vue'
 import gitPanel from './components/git-panel.vue'
 import prefsPanel from './components/prefs-panel.vue'
 import confirm from "./components/confirm-dialog.vue";
+import alert from "./components/alert-dialog.vue";
+import prompt from "./components/prompt-dialog.vue";
 import revisionHistory from "./components/revision-history.vue";
 import notificationAlert from "./components/notification-alert.vue";
 import siteDialog from "./components/site-dialog.vue";
@@ -187,6 +191,8 @@ export default {
     gitPanel,
     prefsPanel,
     confirm,
+    alert,
+    prompt,
     revisionHistory,
     notificationAlert,
     siteDialog,
@@ -247,7 +253,7 @@ export default {
     currentSite() {
       var site = {};
       var self = this;
-      this.sites.forEach(function (item) {
+      this.sites?.forEach(function (item) {
         if (item.id === self.currentSiteId) {
           site = item;
         }
@@ -296,6 +302,13 @@ export default {
       this.nav = nav;
     },
 
+    handleError: function (error) {
+      this.$refs.alert.open(
+        'Error',
+        error
+      );
+    },
+
     saveSite: async function (siteId) {
       await this.fetchSites();
       this.currentSiteId = siteId;
@@ -321,6 +334,42 @@ export default {
         return false;
       }
       await this.$nextTick();
+
+      var prefsPanel = this.$refs.prefsPanel;
+      var useMasterPassword = prefsPanel.useMasterPassword;
+
+      if (useMasterPassword) {
+
+        var masterPassword = util.storageGet('masterPassword');
+        
+        if (!prefsPanel.isValidMasterPassword(masterPassword)) {
+          var newPassword = await this.$refs.prompt.open(
+            'Master password',
+            "Password",
+            {
+              type: 'password',
+              validate: function (value) {
+                return prefsPanel.isValidMasterPassword(util.createHash(value))
+              }
+            }
+          )
+
+          if (!newPassword) {
+            return;
+          }
+
+          // save password
+          util.storageSet('masterPassword', util.createHash(newPassword));
+        }
+      }
+
+      var response = await api.post('sites?site=' + this.currentSiteId, {
+        masterPassword: util.storageGet('masterPassword')
+      });
+
+      console.log(response);
+
+
       await this.$refs.treePanel.load();
       await this.$refs.git.load();
     },
@@ -618,10 +667,6 @@ export default {
     },
   },
   created: async function () {
-    await util.fetchPreferences();
-    await this.fetchSites();
-
-    this.userId = util.storageGet('user');
   },
 
   shortcuts: {
@@ -636,7 +681,13 @@ export default {
       return false // stop propagation
     },
   },
-  mounted() {
+  mounted: async function () {
+    await this.$refs.prefsPanel.fetchPreferences();
+    await this.fetchSites();
+
+    this.userId = util.storageGet('user');
+
+
     this.$shortcut.add('find', 'ctrl+f')
     this.$shortcut.add('saveFile', 'ctrl+s')
 

@@ -10,7 +10,6 @@
 
 <script>
 import api from "./../services/api";
-import util from "./../services/util";
 
 export default {
     data() {
@@ -37,7 +36,6 @@ export default {
             }
 
             if (response.data.subject == 'site') {
-                await util.fetchPreferences();
                 this.$emit('update');
             }
         }

@@ -1,5 +1,4 @@
-
-import api from "./api";
+import Aes from "./../services/aes";
 
 export default {
 	baseName: function (file) {
@@ -135,6 +134,9 @@ export default {
 		temp = cvt_hex(H0) + cvt_hex(H1) + cvt_hex(H2) + cvt_hex(H3) + cvt_hex(H4);
 		return temp.toLowerCase();
 	},
+    createHash (password) {
+      return this.sha1(this.storageGet('salt') + password);
+    },
 	utf8_encode: function (argString) {
 		// http://kevin.vanzonneveld.net
 		// + original by: Webtoolkit.info (http://www.webtoolkit.info/)
@@ -275,6 +277,16 @@ export default {
 		} : null;
 	},
 
+	encrypt: function (value) {
+		let key = this.storageGet('masterPassword');
+		return value === '' ? '' : Aes.encrypt(value, key, 256);
+	},
+
+	decrypt: function (value) {
+		let key = this.storageGet('masterPassword');
+		return Aes.decrypt(value, key, 256);
+	},
+
 	storageSet: function (key, val) {
 		return localStorage[key] = JSON.stringify(val);
 	},
@@ -288,40 +300,4 @@ export default {
 			}
 		}
 	},
-
-	fetchPreferences: function () {
-		api
-			.get("prefs")
-			.then(response => {
-				var data = response.data;
-				var prefs = JSON.parse(JSON.stringify(data));
-
-				for (var i in prefs) {
-					if (Object.prototype.hasOwnProperty.call(prefs, i)) {
-						try {
-							prefs[i] = JSON.parse(prefs[i]);
-						} catch (e) {
-							// do nothing
-						}
-					}
-				}
-
-				this.storageSet('prefs', prefs);
-				this.storageSet('username', data.username);
-				this.storageSet('user', data.user);
-				this.storageSet('hash', data.hash);
-				this.storageSet('salt', data.salt);
-				this.storageSet('masterPassword', data.masterPassword);
-				this.storageSet('premier', data.premier);
-				this.storageSet('edition', data.edition);
-				this.storageSet('subscr_end', data.subscr_end);
-				this.storageSet('trial_end', data.trial_end);
-				this.storageSet('channel', data.channel);
-				this.storageSet('authToken', data.authToken);
-				this.storageSet('newAuthToken', data.newAuthToken);
-				this.storageSet('avatar', data.avatar);
-				this.storageSet('public_key', data.public_key);
-			})
-			.catch(error => console.log(error));
-	}
 }
