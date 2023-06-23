@@ -9,26 +9,26 @@
                         <div v-html="error"></div>
                     </v-alert>
 
-                    <v-btn-toggle v-model="site.server_type">
-                        <v-btn value="ftp">
+                    <v-tabs v-model="site.server_type">
+                        <v-tab value="ftp">
                             FTP
-                        </v-btn>
-                        <v-btn value="sftp">
+                        </v-tab>
+                        <v-tab value="sftp">
                             SFTP
-                        </v-btn>
-                        <v-btn value="dropbox">
+                        </v-tab>
+                        <v-tab value="dropbox">
                             Dropbox
-                        </v-btn>
-                        <v-btn value="gdrive">
+                        </v-tab>
+                        <v-tab value="gdrive">
                             GDrive
-                        </v-btn>
-                        <v-btn value="s3">
+                        </v-tab>
+                        <v-tab value="s3">
                             Amazon S3
-                        </v-btn>
-                        <v-btn value="webdav">
+                        </v-tab>
+                        <v-tab value="webdav">
                             WebDAV
-                        </v-btn>
-                    </v-btn-toggle>
+                        </v-tab>
+                    </v-tabs>
 
                     <v-text-field v-model="site.name" label="Name" density="compact" @change="updateName"></v-text-field>
 

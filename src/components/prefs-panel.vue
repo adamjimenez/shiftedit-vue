@@ -7,7 +7,7 @@
     <v-btn @click="showMasterPasswordDialog">
       <v-icon v-if="useMasterPassword">mdi-checkbox-marked</v-icon>
       <v-icon v-else>mdi-checkbox-blank</v-icon>
-      Master Password
+      &nbsp;Master Password
     </v-btn>
   </div>
 

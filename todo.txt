@@ -1,7 +1,3 @@
-Change branch - NEED virtual scroll https://github.com/vuetifyjs/vuetify/pull/17265
-New branch
-Merge branch
-Delete  
 ? East Panel
 ? Diff
 ? Preview

@@ -74,19 +74,6 @@
             <v-btn text block @click="removeStash">Remove</v-btn>
         </v-menu>
 
-        <v-dialog v-model="prompt" scrollable width="auto">
-            <v-card>
-                <v-card-title>{{ title }}</v-card-title>
-                <v-divider></v-divider>
-                <v-card-text>
-                    <div v-html="message"></div>
-                </v-card-text>
-                <v-divider></v-divider>
-                <v-card-actions>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-
         <v-dialog v-model="diffDialog" width="100%" height="100%">
             <v-card>
                 <v-card-title>{{ diffTitle }}</v-card-title>
@@ -101,6 +88,8 @@
         </v-dialog>
 
         <confirm ref="confirm" />
+        <alert ref="alert" />
+        <prompt ref="prompt" />
     </v-card>
 </template>
 
@@ -127,6 +116,8 @@
 import api from "./../services/api";
 import util from "./../services/util";
 import confirm from "./confirm-dialog.vue";
+import alert from "./alert-dialog.vue";
+import prompt from "./prompt-dialog.vue";
 import * as Diff2Html from 'diff2html';
 import 'diff2html/bundles/css/diff2html.min.css';
 import linkifyHtml from "linkify-html";
@@ -134,6 +125,8 @@ import linkifyHtml from "linkify-html";
 export default {
     components: {
         confirm,
+        alert,
+        prompt,
     },
     props: {
         tabs: null,
@@ -160,9 +153,6 @@ export default {
             selectedCommit: {},
             selectedChange: {},
             selectedStash: {},
-            prompt: false,
-            title: '',
-            message: '',
             loading: false,
             diffDialog: false,
             diffTitle: '',
@@ -191,6 +181,22 @@ export default {
             
             this.$emit('load', this.data);
         },
+        checkout: async function (branch) {
+            if (!branch) {
+                return;
+            }
+            
+            this.loading = true;
+            let response = await api.get(this.currentSite.apiBaseUrl + '&cmd=checkout&branch=' + branch);
+            this.loading = false;
+
+            if (response.data.error) {
+                alert(response.data.error);
+                return;
+            }
+
+            return this.load();
+        },
         commit: async function () {
             var params = {
                 subject: this.subject,
@@ -209,9 +215,10 @@ export default {
 
             console.log(response)
 
-            this.title = 'Notice';
-            this.message = response.data.result.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br>$2')
-            this.prompt = true;
+            this.$refs.alert.open(
+                'Notice',
+                response.data.result.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br>$2')
+            );
 
             this.subject = '';
             this.description = '';
@@ -361,9 +368,10 @@ export default {
                 return;
             }
 
-            this.title = 'Success';
-            this.message = 'Git stash applied';
-            this.prompt = true;
+            this.$refs.alert.open(
+                'Success',
+                'Git stash applied'
+            );
 
             // todo add confirm
 
@@ -387,6 +395,59 @@ export default {
                 this.load();
             }
         },
+        newBranch: async function (branch) {
+            var name = await this.$refs.prompt.open(
+                'Create branch',
+                "Branch",
+            )
+                
+            if (!name) {
+                return;
+            }
+
+            let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=create_branch&name=' + encodeURIComponent(name) + '&from=' + encodeURIComponent(branch), {});
+
+            if (response.data.error) {
+                alert(response.data.error);
+                return;
+            }
+
+            this.$emit('reload', this.data);
+        },
+        deleteBranch: async function (branch) {
+            if (
+                await this.$refs.confirm.open(
+                    "Delete Branch " + branch,
+                    "Are you sure?"
+                )
+            ) {
+                let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=delete_branch&branch=' + encodeURIComponent(branch), {});
+
+                if (response.data.error) {
+                    alert(response.data.error);
+                    return;
+                }
+
+                this.load();
+            }
+        },
+        mergeBranch: async function (branch) {
+            if (
+                await this.$refs.confirm.open(
+                    'Merge ' + branch,
+                    'Are you sure?'
+                )
+            ) {
+                let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=merge&branch=' + encodeURIComponent(branch), {});
+
+                if (response.data.error) {
+                    alert(response.data.error);
+                    return;
+                }
+
+                this.$emit('reload', this.data);
+            }
+        },
         sync: async function () {
             var params = {};
             let response = await api.post(this.currentSite.apiBaseUrl + '&cmd=sync', params);
@@ -396,18 +457,19 @@ export default {
                 return;
             }
 
-            this.title = 'Success';
             var html = response.data.result.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br>$2');
             html = linkifyHtml(html, {target: '_blank'});
 
-            this.message = html;
-            this.prompt = true;
+            this.$refs.alert.open(
+                'Success',
+                html
+            );
         }
     },
 
     computed: {
         currentBranch: function () {
-            let currentBranch = 'master';
+            let currentBranch = '';
 
             this.data.branches.forEach(function (branch) {
                 if (branch.selected) {

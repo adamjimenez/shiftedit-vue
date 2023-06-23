@@ -27,7 +27,15 @@ export default {
             }
 
             this.loading = true;
-            let response = await api.get('notifications');
+            
+            let response;
+
+            try {
+                response = await api.get('notifications');
+            } catch (error) {
+                console.log(error);
+            }
+
             this.loading = false;
 
             if (response.data.message) {

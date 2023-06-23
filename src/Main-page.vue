@@ -5,7 +5,7 @@
         <v-container class="pb-0 h-100">
           <v-row style="flex-wrap: nowrap; height: 100%;">
             <v-col class="pa-0 iconColumn">
-              <v-list density="compact" nav ref="navMenu">
+              <v-list density="compact" nav ref="navMenu" style="height: 100%; display: flex; flex-direction: column;">
                 <v-list-item prepend-icon="mdi-menu" @click="rail = !rail"></v-list-item>
                 <v-list-item prepend-icon="mdi-file" @click.stop="openNav('files', $event)" value="files"
                   :active="nav === 'files'"></v-list-item>
@@ -17,6 +17,7 @@
                 <!--<v-list-item prepend-icon="mdi-content-cut" @click="openNav('snippets', $event)" value="snippets" :active="nav === 'snippets'"></v-list-item>-->
                 <v-list-item prepend-icon="mdi-git" @click="openNav('git', $event)" value="git"
                   :active="nav === 'git'"></v-list-item>
+                <v-spacer></v-spacer>
                 <v-list-item prepend-icon="mdi-wrench" @click="openNav('prefs', $event)" value="prefs"
                   :active="nav === 'prefs'"></v-list-item>
               </v-list>
@@ -40,7 +41,7 @@
               </div>
               <notes-panel v-show="nav === 'notes'" style="height: 100%; flex-direction: column;" />
               <git-panel ref="git" :tabs="$refs.mainTabs" v-show="nav === 'git'" :current-site="currentSite"
-                class="align-start flex-column" @open="openFile" @load="updateGit" />
+                class="align-start flex-column" @open="openFile" @load="updateGit" @reload="reloadSite" />
               <div v-show="nav === 'prefs'" style="height: 100%;">
                 <prefs-panel ref="prefsPanel" :tabs="$refs.mainTabs" @error="handleError" />
               </div>
@@ -76,17 +77,26 @@
 
       <v-footer app>
         <v-autocomplete v-model="branch" :items="branches" item-title="name" item-value="name"
-          density="compact"></v-autocomplete>
-        <v-btn icon @click="gitSync">
-          <v-icon>mdi-sync</v-icon>
-        </v-btn>
+          @update:modelValue="loadBranch"
+          density="compact" @mousedown="preventRightClick($event)"
+          @contextmenu="showGitMenu($event)"
+          :disabled="currentBranch == ''"
+          hide-details
+          >
+            <template v-slot:item="{ props, item }">
+              <v-list-item v-bind="props" :title="item.raw.name" :value="item.raw.id"
+                @contextmenu="showGitMenu($event, item)"></v-list-item>
+            </template>
+          </v-autocomplete>
+        <v-btn icon="mdi-sync" variant="plain" @click="gitSync" :disabled="currentBranch == ''"></v-btn>
 
-        <v-btn @click="goToLine">
+        <v-btn @click="goToLine" variant="plain">
           {{ selection.lead.row + 1 }}:{{ selection.lead.column + 1 }}
           <span v-if="!selection.empty">({{ selection.anchor.row + 1 }}:{{ selection.anchor.column + 1 }})</span>
         </v-btn>
         <v-select v-model="mode" density="compact" :items="modes" item-title="caption" item-value="mode"
-          @update:modelValue="changeMode"></v-select>
+          @update:modelValue="changeMode"
+          hide-details></v-select>
 
       </v-footer>
 
@@ -99,6 +109,12 @@
         <v-btn text block @click="shareSite">Share</v-btn>
         <v-btn text block @click="database"
           :disabled="!currentSiteId || currentSite.db_phpmyadmin === ''">Database</v-btn>
+      </v-menu>
+
+      <v-menu v-model="gitMenu" :style="'left: ' + menuX + 'px; top: ' + (menuY - 100) + 'px;'">
+        <v-btn text block @click="newBranch">New</v-btn>
+        <v-btn text block @click="deleteBranch">Delete</v-btn>
+        <v-btn text block @click="mergeBranch">Merge</v-btn>
       </v-menu>
 
       <v-dialog v-model="saveAsDialog" width="500">
@@ -221,6 +237,7 @@ export default {
       saveAsValue: '',
       userId: '',
       siteMenu: false,
+      gitMenu: false,
       menuX: 0,
       menuY: 0,
       row: 0,
@@ -239,6 +256,7 @@ export default {
       branch: 'master',
       branches: [],
       selectedSite: {},
+      selectedBranch: {},
       mode: '',
       modes: [],
       mounted: false,
@@ -270,6 +288,9 @@ export default {
     },
     currentTab() {
       return this.mounted ? this.$refs.mainTabs?.currentTab : {};
+    },
+    currentBranch() {
+      return this.mounted ? this.$refs.git?.currentBranch : {};
     },
   },
 
@@ -363,13 +384,14 @@ export default {
         }
       }
 
-      var response = await api.post('sites?site=' + this.currentSiteId, {
+      await api.post('sites?site=' + this.currentSiteId, {
         masterPassword: util.storageGet('masterPassword')
       });
 
-      console.log(response);
-
-
+      await this.$refs.treePanel.load();
+      await this.$refs.git.load();
+    },
+    reloadSite: async function () {
       await this.$refs.treePanel.load();
       await this.$refs.git.load();
     },
@@ -572,6 +594,31 @@ export default {
     updateGit(data) {
       this.branches = data.branches;
       this.branch = this.$refs.git.currentBranch;
+    },
+
+    showGitMenu(event, branch) {
+      this.selectedBranch = branch ? branch : this.currentBranch;
+      event.preventDefault();
+      this.gitMenu = true;
+      this.menuX = event.clientX;
+      this.menuY = event.clientY;
+      return false // stop propagation
+    },
+
+    newBranch() {
+      this.$refs.git.newBranch(this.selectedBranch.value);
+    },
+
+    deleteBranch() {
+      this.$refs.git.deleteBranch(this.selectedBranch.value);
+    },
+
+    mergeBranch() {
+      this.$refs.git.mergeBranch(this.selectedBranch.value);
+    },
+
+    loadBranch: async function() {
+      await this.$refs.git.checkout(this.branch);
     },
 
     goToLine() {
