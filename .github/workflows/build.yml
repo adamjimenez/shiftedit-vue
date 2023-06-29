@@ -23,9 +23,9 @@ jobs:
 
       - name: Push to Builds Repo
         run: |
-          git add .
-          git commit -m 'Deploying latest build'
           git config user.email "$MY_EMAIL"
           git config user.name "$MY_NAME"
+          git add .
+          git commit -m 'Deploying latest build'
           git remote set-url origin https://$MY_NAME:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
           git push origin shiftedit-builds
