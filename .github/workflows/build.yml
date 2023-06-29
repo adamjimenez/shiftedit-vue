@@ -28,4 +28,4 @@ jobs:
           git add .
           git commit -m 'Deploying latest build'
           git remote set-url origin https://$MY_NAME:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
-          git push origin shiftedit-builds
+          git push origin master
