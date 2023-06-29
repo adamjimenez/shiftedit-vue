@@ -27,4 +27,4 @@ jobs:
           git add --all
           git commit -m 'Deploying latest build'
           git remote add origin https://adamjimenez:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
-          git push origin master
+          git push origin master --force
