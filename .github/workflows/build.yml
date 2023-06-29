@@ -22,12 +22,13 @@ jobs:
         run: |
           git config --global user.name "$(git log -n 1 --pretty=format:%an)"
           git config --global user.email "$(git log -n 1 --pretty=format:%ae)"
-          cd dist
+          mkdir new
+          cd new
           git init
           git remote add origin https://adamjimenez:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
-          git stash
           git pull
-          git stash pop
-          git add --all
+          rm -Rf *
+          cp ../dist/* .
+          
           git commit -m 'Deploying latest build'
           git push origin master --force
