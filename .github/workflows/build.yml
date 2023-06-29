@@ -29,6 +29,7 @@ jobs:
           git pull origin master
           rm -Rf *
           cp -r ../dist/* .
-          
+
+          git add --all          
           git commit -m 'Deploying latest build'
           git push origin master --force
