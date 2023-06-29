@@ -20,13 +20,15 @@ const api = axios.create({
     adapter: cache.adapter
 })
 
+let webUrl = location.host === 'localhost:8080' ? 'http://localhost/' : 'https://shiftedit.net/';
+
 api.interceptors.response.use(function (response) {
     return response;
 }, function (error) {
     const originalRequest = error.config;
 
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
-        location.href = 'http://localhost/login?u=' + encodeURIComponent(location.href)
+        location.href = webUrl + 'login?u=' + encodeURIComponent(location.href)
         //router.push('/auth/login')
 
         return Promise.reject('Forbidden');
@@ -35,7 +37,7 @@ api.interceptors.response.use(function (response) {
     return Promise.reject(error);
 })
 
-let apiBaseUrl = 'http://localhost/api/';
+let apiBaseUrl = webUrl + '/api/';
 
 export default {
     get(path) {
