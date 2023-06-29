@@ -8,9 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      MY_EMAIL: adam.jimenez@gmail.com
-      MY_NAME: adamjimenez
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -23,9 +20,9 @@ jobs:
 
       - name: Push to Builds Repo
         run: |
-          git config user.email "$MY_EMAIL"
-          git config user.name "$MY_NAME"
+          git config user.name "$(git log -n 1 --pretty=format:%an)"
+          git config user.email "$(git log -n 1 --pretty=format:%ae)"
           git add .
           git commit -m 'Deploying latest build'
-          git remote set-url origin https://$MY_NAME:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
+          git remote set-url origin https://adamjimenez:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
           git push origin master
