@@ -37,7 +37,7 @@ api.interceptors.response.use(function (response) {
     return Promise.reject(error);
 })
 
-let apiBaseUrl = webUrl + '/api/';
+let apiBaseUrl = webUrl + 'api/';
 
 export default {
     get(path) {
