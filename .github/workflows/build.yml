@@ -20,9 +20,11 @@ jobs:
 
       - name: Push to Builds Repo
         run: |
-          git config user.name "$(git log -n 1 --pretty=format:%an)"
-          git config user.email "$(git log -n 1 --pretty=format:%ae)"
-          git add .
+          git config --global user.name "$(git log -n 1 --pretty=format:%an)"
+          git config --global user.email "$(git log -n 1 --pretty=format:%ae)"
+          cd dist
+          git init
+          git add --all
           git commit -m 'Deploying latest build'
           git remote set-url origin https://adamjimenez:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
           git push origin master
