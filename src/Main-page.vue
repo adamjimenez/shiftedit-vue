@@ -82,6 +82,7 @@
           @contextmenu="showGitMenu($event)"
           :disabled="currentBranch == ''"
           hide-details
+          class="flex-grow-0"
           >
             <template v-slot:item="{ props, item }">
               <v-list-item v-bind="props" :title="item.raw.name" :value="item.raw.id"
@@ -90,13 +91,17 @@
           </v-autocomplete>
         <v-btn icon="mdi-sync" variant="plain" @click="gitSync" :disabled="currentBranch == ''"></v-btn>
 
+        <v-spacer></v-spacer>
+
         <v-btn @click="goToLine" variant="plain">
           {{ selection.lead.row + 1 }}:{{ selection.lead.column + 1 }}
           <span v-if="!selection.empty">({{ selection.anchor.row + 1 }}:{{ selection.anchor.column + 1 }})</span>
         </v-btn>
         <v-select v-model="mode" density="compact" :items="modes" item-title="caption" item-value="mode"
           @update:modelValue="changeMode"
-          hide-details></v-select>
+          hide-details
+          class="flex-grow-0"
+          ></v-select>
 
       </v-footer>
 
