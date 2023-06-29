@@ -1,0 +1,22 @@
+name: Build and Push to Builds Repo
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Build App
+        run: yarn build
+
+      - name: Push to Builds Repo
+        run: |
+          git add .
+          git commit -m 'Deploying latest build'
+          git push origin shiftedit-builds
