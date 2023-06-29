@@ -26,7 +26,7 @@ jobs:
           cd new
           git init
           git remote add origin https://adamjimenez:${{ secrets.SSH_KEY }}@github.com/adamjimenez/shiftedit-builds.git
-          git pull
+          git pull origin master
           rm -Rf *
           cp ../dist/* .
           
